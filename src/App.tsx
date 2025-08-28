@@ -12,9 +12,9 @@ function App() {
   return (
     <AppProvider>
       <Router>
-        <div className="min-h-screen bg-gray-50">
+        <div className="min-h-screen bg-keystone-primary">
           <Header />
-          <main>
+          <main className="h-full">
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/graph/:documentId" element={<GraphPage />} />

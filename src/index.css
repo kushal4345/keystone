@@ -1,4 +1,5 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700&display=swap');
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -10,6 +11,7 @@
   
   html {
     scroll-behavior: smooth;
+    overflow-x: hidden;
   }
   
   body {
@@ -17,6 +19,9 @@
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+    background-color: #1a1a1a;
+    color: #F5F5F5;
+    overflow-x: hidden;
   }
 }
 
@@ -40,27 +45,27 @@
   }
 }
 
-/* Custom scrollbar */
+/* Custom scrollbar for Keystone theme */
 ::-webkit-scrollbar {
   width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: #2a2a2a;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #404040;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #D4AF37;
 }
 
-/* Ensure proper text selection colors */
+/* Keystone theme text selection */
 ::selection {
-  background-color: #3b82f6;
-  color: white;
+  background-color: #D4AF37;
+  color: #1a1a1a;
 }

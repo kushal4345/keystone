@@ -20,9 +20,26 @@ interface AppProviderProps {
  * Manages online/offline state and document state
  */
 export function AppProvider({ children }: AppProviderProps) {
-  const [isOnline, setIsOnline] = useState(false);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Auto-detect online/offline status
+  React.useEffect(() => {
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Initial check
+    setIsOnline(navigator.onLine);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   const value = {
     isOnline,
