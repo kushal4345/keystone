@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { FileUpload } from './FileUpload';
 import { useApp } from '@/context/AppContext';
 import { apiService } from '@/services/apiService';
+import keystoneLogo from '@/media/keystone.png';
 
 /**
  * Home page with central upload interface
@@ -49,21 +50,23 @@ export function HomePage() {
   };
 
   return (
-    <div className="bg-keystone-primary px-6 py-6">
-      <div className="max-w-6xl mx-auto">
-        <div className="text-center mb-8 animate-fade-in">
-          <h1 className="text-4xl font-serif font-bold text-keystone-accent mb-4">
-            Keystone
-          </h1>
-        </div>
+    <div className="min-h-screen bg-keystone-primary flex items-center px-8 py-12">
+      <div className="max-w-6xl mx-auto w-full">
+        <div className="grid lg:grid-cols-2 gap-16 items-center">
+          {/* Left Side - Logo/Title */}
+          <div className="text-center lg:text-left animate-fade-in">
+            <img src={keystoneLogo} alt="Keystone" className="max-w-full h-auto" />
+          </div>
 
-        <div className="animate-slide-up">
-          <FileUpload
-            onFileSelect={handleFileSelect}
-            onUrlSubmit={handleUrlSubmit}
-            isLoading={isLoading}
-            error={error}
-          />
+          {/* Right Side - Upload Options */}
+          <div className="animate-slide-up">
+            <FileUpload
+              onFileSelect={handleFileSelect}
+              onUrlSubmit={handleUrlSubmit}
+              isLoading={isLoading}
+              error={error}
+            />
+          </div>
         </div>
       </div>
     </div>

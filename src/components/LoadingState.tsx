@@ -30,9 +30,10 @@ export function LoadingState({ message = 'Loading...', size = 'medium' }: Loadin
   return (
     <div className={`flex flex-col items-center justify-center ${containerClasses[size]}`}>
       <div className="relative">
-        <div className={`${sizeClasses[size]} border-2 border-keystone-border border-t-keystone-accent rounded-full animate-spin`} />
+        <div className={`${sizeClasses[size]} border-4 border-black border-t-black border-r-transparent animate-spin`} 
+             style={{ borderRadius: '0' }} />
       </div>
-      <p className={`text-keystone-text-muted font-medium ${textClasses[size]}`}>
+      <p className={`text-black font-bold ${textClasses[size]} tracking-wide`}>
         {message}
       </p>
     </div>
