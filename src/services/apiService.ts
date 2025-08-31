@@ -6,7 +6,23 @@ import type { GraphData, ProcessDocumentResponse, AskQuestionResponse } from '@/
  */
 class ApiService {
   private isOnline: boolean = false;
-  private baseUrl: string = 'http://127.0.0.1:8000';
+  private baseUrl: string = this.getBaseUrl();
+
+  private getBaseUrl(): string {
+    // Check if running in Electron
+    const isElectron = typeof window !== 'undefined' && window.electronAPI;
+    
+    // Check if running in development mode in browser
+    const isDevelopmentBrowser = import.meta.env.DEV && !isElectron;
+    
+    if (isDevelopmentBrowser) {
+      // Use proxy in browser development
+      return '';
+    } else {
+      // Use full URL for Electron or production builds
+      return 'https://hybrid-ai-tutor-1.onrender.com';
+    }
+  }
 
   /**
    * Set the online/offline mode
@@ -63,6 +79,22 @@ class ApiService {
     }
   }
 
+  /**
+   * Get a summary for a specific topic from the document
+   */
+  async getSummary(documentId: string, topic: string): Promise<{ summary: string }> {
+    try {
+      if (this.isOnline) {
+        return this.getSummaryOnline(documentId, topic);
+      } else {
+        throw new Error('Summary functionality not available in offline mode');
+      }
+    } catch (error) {
+      console.error('Summary generation error:', error);
+      throw new Error('Failed to generate summary');
+    }
+  }
+
   // Private methods for offline mode (Electron IPC)
 
   private async processDocumentOffline(source: File | string): Promise<ProcessDocumentResponse> {
@@ -91,54 +123,85 @@ class ApiService {
   // Private methods for online mode (HTTP API)
 
   private async processDocumentOnline(source: File | string): Promise<ProcessDocumentResponse> {
-    const formData = new FormData();
-    
     if (typeof source === 'string') {
-      // YouTube URL
-      formData.append('url', source);
-      formData.append('type', 'youtube');
-    } else {
-      // File upload
-      formData.append('file', source);
-      formData.append('type', 'pdf');
+      // YouTube URL processing not available in current backend
+      throw new Error('YouTube processing is not available with the current backend');
     }
+    
+    // File upload to /api/process-pdf endpoint
+    const formData = new FormData();
+    formData.append('file', source);
 
-    const response = await fetch(`${this.baseUrl}/api/upload`, {
+    const response = await fetch(`${this.baseUrl}/api/process-pdf`, {
       method: 'POST',
       body: formData,
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
     }
 
-    return response.json();
+    const backendResponse = await response.json();
+    
+    // Transform backend response to match frontend expectations
+    return {
+      documentId: backendResponse.index_name || 'nerv',
+      title: source.name || 'Processed Document',
+      status: 'success' as const,
+      graphData: backendResponse.graph_data
+    };
   }
 
   private async fetchGraphDataOnline(documentId: string): Promise<GraphData> {
-    const response = await fetch(`${this.baseUrl}/api/graph/${documentId}`);
-    
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    return response.json();
+    // For now, graph data is returned with the process-pdf response
+    // This method is kept for compatibility but should be enhanced 
+    // if the backend provides a separate graph endpoint
+    throw new Error('Graph data is included in the document processing response. Use processDocument instead.');
   }
 
   private async askQuestionOnline(documentId: string, question: string): Promise<AskQuestionResponse> {
-    const response = await fetch(`${this.baseUrl}/api/ask`, {
+    const response = await fetch(`${this.baseUrl}/api/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        documentId,
-        question,
+        chat_id: documentId,
+        index_name: 'nerv', // Using the fixed index name from backend
+        user_message: question,
       }),
     });
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      const errorText = await response.text();
+      throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+    }
+
+    const backendResponse = await response.json();
+    
+    // Transform backend response to match frontend expectations
+    return {
+      answer: backendResponse.ai_response,
+      sources: [] // Backend doesn't return sources in current implementation
+    };
+  }
+
+  private async getSummaryOnline(documentId: string, topic: string): Promise<{ summary: string }> {
+    const response = await fetch(`${this.baseUrl}/api/get-summary`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        topic: topic,
+        index_name: 'nerv', // Using the fixed index name from backend
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
     }
 
     return response.json();

@@ -3,7 +3,7 @@
  */
 
 export interface GraphNode {
-  id: number;
+  id: string | number;
   label: string;
   level?: number;
   x?: number;
@@ -11,8 +11,10 @@ export interface GraphNode {
 }
 
 export interface GraphEdge {
-  from: number;
-  to: number;
+  source: string | number;
+  target: string | number;
+  from?: number; // Keep for backward compatibility
+  to?: number;   // Keep for backward compatibility
 }
 
 export interface GraphData {
@@ -40,6 +42,7 @@ export interface ProcessDocumentResponse {
   title: string;
   status: 'success' | 'error';
   error?: string;
+  graphData?: GraphData;
 }
 
 export interface AskQuestionResponse {

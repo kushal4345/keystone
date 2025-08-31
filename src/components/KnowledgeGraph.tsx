@@ -57,8 +57,8 @@ export function KnowledgeGraph({ data, onNodeSelect }: KnowledgeGraphProps) {
 
     const edges = new DataSet(
       data.edges.map(edge => ({
-        from: edge.from,
-        to: edge.to,
+        from: edge.from ?? edge.source,
+        to: edge.to ?? edge.target,
         color: { color: '#9CA3AF', highlight: '#4F46E5' },
         width: 2,
         smooth: { type: 'continuous', roundness: 0.2 },

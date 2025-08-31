@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
+import type { GraphData } from '@/types';
 
 interface AppContextType {
   isOnline: boolean;
@@ -7,6 +8,8 @@ interface AppContextType {
   setCurrentDocumentId: (id: string | null) => void;
   isLoading: boolean;
   setIsLoading: (loading: boolean) => void;
+  currentGraphData: GraphData | null;
+  setCurrentGraphData: (data: GraphData | null) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -23,6 +26,7 @@ export function AppProvider({ children }: AppProviderProps) {
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [currentGraphData, setCurrentGraphData] = useState<GraphData | null>(null);
 
   // Auto-detect online/offline status
   React.useEffect(() => {
@@ -48,6 +52,8 @@ export function AppProvider({ children }: AppProviderProps) {
     setCurrentDocumentId,
     isLoading,
     setIsLoading,
+    currentGraphData,
+    setCurrentGraphData,
   };
 
   return (

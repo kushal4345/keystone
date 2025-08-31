@@ -1,26 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { KnowledgeGraph } from './KnowledgeGraph';
 import { ChatInterface } from './ChatInterface';
-import { LoadingState } from './LoadingState';
 import { useApp } from '@/context/AppContext';
 import { apiService } from '@/services/apiService';
-import type { GraphData } from '@/types';
 
 /**
  * Main graph workspace with three-panel layout
  */
 export function GraphPage() {
   const { documentId } = useParams<{ documentId: string }>();
-  const { isOnline, setCurrentDocumentId } = useApp();
-  const [graphData, setGraphData] = useState<GraphData | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { isOnline, setCurrentDocumentId, currentGraphData } = useApp();
 
   useEffect(() => {
     if (documentId) {
       setCurrentDocumentId(documentId);
-      loadGraphData(documentId);
     }
   }, [documentId, setCurrentDocumentId]);
 
@@ -29,19 +23,8 @@ export function GraphPage() {
     apiService.setOnlineMode(isOnline);
   }, [isOnline]);
 
-  const loadGraphData = async (docId: string) => {
-    setIsLoading(true);
-    setError(null);
-
-    try {
-      const data = await apiService.fetchGraphData(docId);
-      setGraphData(data);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load graph data');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // No longer needed since graph data comes from context
+  // const loadGraphData = async (docId: string) => { ... }
 
   const handleNodeSelect = (nodeId: number, nodeLabel: string) => {
     // This will trigger a question in the chat interface
@@ -60,32 +43,9 @@ export function GraphPage() {
     );
   }
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gray-50 pt-20 flex items-center justify-center">
-        <LoadingState message="Loading knowledge graph..." size="large" />
-      </div>
-    );
-  }
+  // Remove loading and error states since we get data from context
 
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 pt-20 flex items-center justify-center">
-        <div className="text-center max-w-md">
-          <h2 className="text-2xl font-bold text-red-600 mb-4">Error</h2>
-          <p className="text-gray-600 mb-4">{error}</p>
-          <button
-            onClick={() => loadGraphData(documentId)}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (!graphData) {
+  if (!currentGraphData) {
     return (
       <div className="min-h-screen bg-gray-50 pt-20 flex items-center justify-center">
         <div className="text-center">
@@ -103,7 +63,7 @@ export function GraphPage() {
         <div className="flex-1 p-6">
           <div className="h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
             <KnowledgeGraph 
-              data={graphData} 
+              data={currentGraphData} 
               onNodeSelect={handleNodeSelect}
             />
           </div>

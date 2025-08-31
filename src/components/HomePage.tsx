@@ -10,7 +10,7 @@ import keystoneLogo from '@/media/keystone.png';
  */
 export function HomePage() {
   const navigate = useNavigate();
-  const { setCurrentDocumentId, isOnline } = useApp();
+  const { setCurrentDocumentId, setCurrentGraphData, isOnline } = useApp();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,6 +26,12 @@ export function HomePage() {
     try {
       const result = await apiService.processDocument(file);
       setCurrentDocumentId(result.documentId);
+      
+      // Store graph data if available
+      if (result.graphData) {
+        setCurrentGraphData(result.graphData);
+      }
+      
       navigate(`/graph/${result.documentId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to process file');
@@ -41,6 +47,12 @@ export function HomePage() {
     try {
       const result = await apiService.processDocument(url);
       setCurrentDocumentId(result.documentId);
+      
+      // Store graph data if available
+      if (result.graphData) {
+        setCurrentGraphData(result.graphData);
+      }
+      
       navigate(`/graph/${result.documentId}`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to process URL');

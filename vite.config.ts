@@ -10,7 +10,14 @@ export default defineConfig({
     emptyOutDir: true,
   },
   server: {
-    port: 5173,
+    port: 5500,
+    proxy: {
+      '/api': {
+        target: 'https://hybrid-ai-tutor-1.onrender.com',
+        changeOrigin: true,
+        secure: true,
+      },
+    },
   },
   optimizeDeps: {
     exclude: ['lucide-react'],

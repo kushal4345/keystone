@@ -25,7 +25,7 @@ function createWindow() {
         show: false,
     });
     const startUrl = isDevelopment
-        ? 'http://localhost:5173'
+        ? 'http://localhost:5500'
         : `file://${join(__dirname, '../dist/index.html')}`;
     mainWindow.loadURL(startUrl);
     mainWindow.once('ready-to-show', () => {
