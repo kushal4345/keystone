@@ -64,11 +64,9 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
         },
         font: {
           size: 14,
-          color: '#000000',
+          color: '#FFFFFF',
           face: 'Inter, sans-serif',
-          bold: '800',
-          strokeWidth: 3,
-          strokeColor: '#FFFFFF',
+          bold: '600',
         },
         shape: 'hexagon',
         size: 25 + (3 - (node.level || 0)) * 8,

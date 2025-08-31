@@ -42,6 +42,26 @@ export const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({
     setMessages([welcomeMessage]);
   }, [documentId]);
 
+  const cleanResponse = (text: string): string => {
+    return text
+      // Remove markdown headers
+      .replace(/#{1,6}\s*/g, '')
+      // Remove markdown bold/italic
+      .replace(/\*\*(.*?)\*\*/g, '$1')
+      .replace(/\*(.*?)\*/g, '$1')
+      // Remove markdown links
+      .replace(/\[(.*?)\]\(.*?\)/g, '$1')
+      // Remove HTML entities
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      // Remove extra whitespace
+      .replace(/\n\s*\n/g, '\n\n')
+      .trim();
+  };
+
   const handleMessageSubmission = async (messageContent: string) => {
     if (!messageContent.trim() || isThinking) return;
 
@@ -61,7 +81,7 @@ export const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({
       const aiMessage: ChatMessageType = {
         id: uuidv4(),
         type: 'ai',
-        content: response.answer,
+        content: cleanResponse(response.answer),
         timestamp: new Date(),
       };
 
@@ -118,7 +138,7 @@ export const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({
       }}
     >
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-3">
+      <div className="flex-1 overflow-y-auto p-4 space-y-3" style={{ minHeight: 0 }}>
         {messages.map(message => (
           <ChatMessage key={message.id} message={message} />
         ))}

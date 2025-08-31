@@ -128,21 +128,19 @@ export function GraphPage() {
 
         {/* Chat Sidebar */}
         <div 
-          className="border-l border-gray-700"
-          style={{ width: chatWidth }}
+          className="border-l border-gray-700 flex flex-col"
+          style={{ width: chatWidth, height: '100vh' }}
         >
-          <div className="h-full flex flex-col">
-            <div className="px-4 py-3 bg-gray-900 border-b border-gray-700">
-              <h3 className="text-base font-semibold text-white">
-                Chat
-              </h3>
-              <p className="text-sm text-gray-400 mt-0.5">
-                Ask questions about the document
-              </p>
-            </div>
-            <div className="flex-1">
-              <ChatInterface ref={chatRef} documentId={documentId} />
-            </div>
+          <div className="px-4 py-3 bg-gray-900 border-b border-gray-700 flex-shrink-0">
+            <h3 className="text-base font-semibold text-white">
+              Chat
+            </h3>
+            <p className="text-sm text-gray-400 mt-0.5">
+              Ask questions about the document
+            </p>
+          </div>
+          <div className="flex-1 min-h-0">
+            <ChatInterface ref={chatRef} documentId={documentId} />
           </div>
         </div>
       </div>
