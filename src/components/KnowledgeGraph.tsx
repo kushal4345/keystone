@@ -179,7 +179,7 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
             drawThreshold: 5
           }
         },
-        margin: 10,
+        margin: { top: 10, right: 10, bottom: 10, left: 10 },
       },
       edges: {
         scaling: {
@@ -315,12 +315,10 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
     <div className="relative w-full h-full">
       <div 
         ref={containerRef} 
-        className="w-full h-full rounded-lg shadow-2xl overflow-hidden"
+        className="w-full h-full"
         onMouseLeave={() => setContextMenu(prev => ({ ...prev, visible: false }))}
         style={{
-          background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 30%, #1a1a1a 60%, #333333 100%)',
-          border: '3px solid #D4AF37',
-          boxShadow: '0 0 30px rgba(212, 175, 55, 0.3), inset 0 0 50px rgba(255, 215, 0, 0.1)',
+          background: '#2a2a2a',
         }}
       />
 
@@ -328,13 +326,9 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
       <div className="absolute top-4 right-4 flex space-x-2">
         <button
           onClick={() => networkRef.current?.fit({ animation: { duration: 800, easingFunction: 'easeInOutQuad' } })}
-          className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-yellow-400 hover:from-yellow-400 hover:to-yellow-300 text-black font-bold text-xs tracking-wide transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-yellow-500/50"
-          style={{
-            clipPath: 'polygon(15% 0%, 85% 0%, 100% 35%, 90% 100%, 10% 100%, 0% 35%)',
-            border: '2px solid #000000',
-          }}
+          className="px-3 py-2 bg-yellow-500 hover:bg-yellow-400 text-black font-semibold text-xs rounded transition-colors"
         >
-          ⚡ FIT VIEW
+          Fit View
         </button>
         <button
           onClick={() => {
@@ -343,20 +337,16 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
               networkRef.current.moveTo({ scale: scale * 1.2 });
             }
           }}
-          className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-yellow-400 hover:from-yellow-400 hover:to-yellow-300 text-black font-bold text-xs tracking-wide transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-yellow-500/50"
-          style={{
-            clipPath: 'polygon(15% 0%, 85% 0%, 100% 35%, 90% 100%, 10% 100%, 0% 35%)',
-            border: '2px solid #000000',
-          }}
+          className="px-3 py-2 bg-yellow-500 hover:bg-yellow-400 text-black font-semibold text-xs rounded transition-colors"
         >
-          ⚡ ZOOM IN
+          Zoom In
         </button>
       </div>
 
       {/* Instructions */}
-      <div className="absolute bottom-4 left-4 text-yellow-400 text-xs font-bold tracking-wide">
-        <p className="bg-black/50 px-3 py-1 rounded-lg border border-yellow-500/30">
-          ⚡ Click nodes to explore • Drag to move • Double-click to focus
+      <div className="absolute bottom-4 left-4 text-gray-400 text-xs">
+        <p className="bg-black/70 px-3 py-1 rounded">
+          Click nodes to explore • Drag to move • Double-click to focus
         </p>
       </div>
 

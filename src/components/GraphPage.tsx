@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import { KnowledgeGraph } from './KnowledgeGraph';
 import { ChatInterface, type ChatInterfaceRef } from './ChatInterface';
@@ -12,6 +12,8 @@ export function GraphPage() {
   const { documentId } = useParams<{ documentId: string }>();
   const { isOnline, setCurrentDocumentId, currentGraphData } = useApp();
   const chatRef = useRef<ChatInterfaceRef>(null);
+  const [chatWidth, setChatWidth] = useState(384); // 384px = w-96
+  const [isDragging, setIsDragging] = useState(false);
 
   useEffect(() => {
     if (documentId) {
@@ -43,6 +45,40 @@ export function GraphPage() {
     }
   };
 
+  const handleMouseDown = useCallback(() => {
+    setIsDragging(true);
+  }, []);
+
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    if (!isDragging) return;
+    
+    const newWidth = window.innerWidth - e.clientX;
+    const minWidth = 280;
+    const maxWidth = window.innerWidth * 0.6;
+    
+    setChatWidth(Math.max(minWidth, Math.min(maxWidth, newWidth)));
+  }, [isDragging]);
+
+  const handleMouseUp = useCallback(() => {
+    setIsDragging(false);
+  }, []);
+
+  useEffect(() => {
+    if (isDragging) {
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = 'col-resize';
+      document.body.style.userSelect = 'none';
+      
+      return () => {
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleMouseUp);
+        document.body.style.cursor = '';
+        document.body.style.userSelect = '';
+      };
+    }
+  }, [isDragging, handleMouseMove, handleMouseUp]);
+
   if (!documentId) {
     return (
       <div className="min-h-screen bg-gray-50 pt-20 flex items-center justify-center">
@@ -69,44 +105,42 @@ export function GraphPage() {
 
   return (
     <div 
-      className="min-h-screen pt-20"
+      className="min-h-screen"
       style={{
-        background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 30%, #1a1a1a 60%, #333333 100%)',
+        background: '#1a1a1a',
       }}
     >
-      <div className="flex h-[calc(100vh-5rem)]">
+      <div className="flex h-screen">
         {/* Main Graph Canvas */}
-        <div className="flex-1 p-6">
-          <div className="h-full rounded-xl overflow-hidden">
-            <KnowledgeGraph 
-              data={currentGraphData} 
-              onNodeSelect={handleNodeSelect}
-              onNodeExplain={handleNodeExplain}
-            />
-          </div>
+        <div className="flex-1">
+          <KnowledgeGraph 
+            data={currentGraphData} 
+            onNodeSelect={handleNodeSelect}
+            onNodeExplain={handleNodeExplain}
+          />
         </div>
 
+        {/* Resize Handle */}
+        <div
+          className="w-1 bg-gray-700 hover:bg-yellow-500 cursor-col-resize transition-colors"
+          onMouseDown={handleMouseDown}
+        />
+
         {/* Chat Sidebar */}
-        <div className="w-96 p-6 pl-0">
-          <div className="h-full rounded-xl overflow-hidden">
-            <div 
-              className="px-6 py-4"
-              style={{
-                background: 'linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%)',
-                borderTopLeftRadius: '12px',
-                borderTopRightRadius: '12px',
-                border: '2px solid #D4AF37',
-                borderBottom: '2px solid #D4AF37',
-              }}
-            >
-              <h3 className="text-lg font-bold text-yellow-400 tracking-wide">
-                ⚡ KEYSTONE CHAT
+        <div 
+          className="border-l border-gray-700"
+          style={{ width: chatWidth }}
+        >
+          <div className="h-full flex flex-col">
+            <div className="px-4 py-3 bg-gray-900 border-b border-gray-700">
+              <h3 className="text-base font-semibold text-white">
+                Chat
               </h3>
-              <p className="text-sm text-yellow-600 mt-1 font-medium">
-                Explore content through AI conversation
+              <p className="text-sm text-gray-400 mt-0.5">
+                Ask questions about the document
               </p>
             </div>
-            <div className="h-[calc(100%-5rem)]">
+            <div className="flex-1">
               <ChatInterface ref={chatRef} documentId={documentId} />
             </div>
           </div>
