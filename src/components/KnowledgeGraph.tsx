@@ -1,8 +1,8 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import { useEffect, useRef, useState, useCallback } from 'react';
 import { Network } from 'vis-network';
 import { DataSet } from 'vis-data';
 import { NodeContextMenu } from './NodeContextMenu';
-import type { GraphData, GraphNode } from '@/types';
+import type { GraphData } from '@/types';
 
 interface KnowledgeGraphProps {
   data: GraphData;
@@ -35,7 +35,7 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
     if (onNodeExplain) {
       onNodeExplain(`Explain ${nodeLabel} in detail based on the document content.`);
     }
-    
+
     // Also trigger the old callback for backward compatibility
     if (onNodeSelect) {
       onNodeSelect(nodeId, nodeLabel);
@@ -63,14 +63,14 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
           }
         },
         font: {
-          size: 16,
-          color: '#1a1a1a',
+          size: 14,
+          color: '#000000',
           face: 'Inter, sans-serif',
-          bold: '600',
-          strokeWidth: 2,
-          strokeColor: '#ffffff',
+          bold: '800',
+          strokeWidth: 3,
+          strokeColor: '#FFFFFF',
         },
-        shape: 'dot',
+        shape: 'hexagon',
         size: 25 + (3 - (node.level || 0)) * 8,
         borderWidth: 3,
         shadow: {
@@ -80,20 +80,13 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
           x: 3,
           y: 3,
         },
-        chosen: {
-          node: function(values: any, id: any, selected: boolean, hovering: boolean) {
-            if (hovering) {
-              values.shadow = true;
-              values.shadowSize = 15;
-              values.shadowColor = 'rgba(255, 215, 0, 0.6)';
-            }
-          }
-        }
+        chosen: true
       }))
     );
 
-    const edges = new DataSet(
-      data.edges.map(edge => ({
+        const edges = new DataSet(
+      data.edges.map((edge, index) => ({
+        id: index,
         from: edge.from ?? edge.source,
         to: edge.to ?? edge.target,
         color: { 
@@ -104,6 +97,7 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
         },
         width: 3,
         smooth: { 
+          enabled: true,
           type: 'dynamic',
           roundness: 0.3,
           forceDirection: 'none'
@@ -203,7 +197,7 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
       }
     };
 
-    const network = new Network(containerRef.current, { nodes, edges }, options);
+    const network = new Network(containerRef.current, { nodes: nodes as any, edges: edges as any }, options);
     networkRef.current = network;
 
     // Handle node interactions
@@ -213,14 +207,14 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
     network.on('hoverNode', (event) => {
       const nodeId = event.node;
       const node = data.nodes.find(n => n.id === nodeId);
-      
+
       if (node && containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
         const canvasPosition = network.canvasToDOM({ x: event.pointer.canvas.x, y: event.pointer.canvas.y });
-        
+
         // Clear existing timeout
         if (hoverTimeout) clearTimeout(hoverTimeout);
-        
+
         // Show context menu after short delay
         hoverTimeout = setTimeout(() => {
           setContextMenu({
@@ -231,7 +225,7 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
             nodeLabel: node.label,
           });
         }, 300); // Reduced delay for better responsiveness
-        
+
         // Change cursor
         if (containerRef.current) {
           containerRef.current.style.cursor = 'pointer';
@@ -244,12 +238,12 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
         clearTimeout(hoverTimeout);
         hoverTimeout = null;
       }
-      
+
       // Hide context menu with small delay to prevent flickering
       setTimeout(() => {
         setContextMenu(prev => ({ ...prev, visible: false }));
       }, 100);
-      
+
       // Reset cursor
       if (containerRef.current) {
         containerRef.current.style.cursor = 'default';
@@ -259,7 +253,7 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
     // Handle clicks for RAG requests
     network.on('click', (event) => {
       setContextMenu(prev => ({ ...prev, visible: false }));
-      
+
       if (event.nodes.length > 0) {
         const nodeId = event.nodes[0];
         const node = data.nodes.find(n => n.id === nodeId);
@@ -317,27 +311,30 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
     setContextMenu(prev => ({ ...prev, visible: false }));
   };
 
-  return (
+    return (
     <div className="relative w-full h-full">
       <div 
         ref={containerRef} 
-        className="w-full h-full bg-gradient-to-br from-keystone-primary via-gray-900 to-black rounded-lg border-2 border-keystone-accent/20 shadow-2xl"
+        className="w-full h-full rounded-lg shadow-2xl overflow-hidden"
         onMouseLeave={() => setContextMenu(prev => ({ ...prev, visible: false }))}
         style={{
-          background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
+          background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 30%, #1a1a1a 60%, #333333 100%)',
+          border: '3px solid #D4AF37',
+          boxShadow: '0 0 30px rgba(212, 175, 55, 0.3), inset 0 0 50px rgba(255, 215, 0, 0.1)',
         }}
       />
-      
+
       {/* Graph Controls */}
       <div className="absolute top-4 right-4 flex space-x-2">
         <button
-          onClick={() => networkRef.current?.fit({ animation: { duration: 800 } })}
-          className="px-3 py-2 bg-keystone-accent/80 hover:bg-keystone-accent text-black font-bold text-xs tracking-wide transition-all duration-300 transform hover:scale-105"
+          onClick={() => networkRef.current?.fit({ animation: { duration: 800, easingFunction: 'easeInOutQuad' } })}
+          className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-yellow-400 hover:from-yellow-400 hover:to-yellow-300 text-black font-bold text-xs tracking-wide transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-yellow-500/50"
           style={{
-            clipPath: 'polygon(8% 0%, 92% 0%, 100% 50%, 92% 100%, 8% 100%, 0% 50%)'
+            clipPath: 'polygon(15% 0%, 85% 0%, 100% 35%, 90% 100%, 10% 100%, 0% 35%)',
+            border: '2px solid #000000',
           }}
         >
-          FIT VIEW
+          ⚡ FIT VIEW
         </button>
         <button
           onClick={() => {
@@ -346,20 +343,23 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
               networkRef.current.moveTo({ scale: scale * 1.2 });
             }
           }}
-          className="px-3 py-2 bg-keystone-accent/80 hover:bg-keystone-accent text-black font-bold text-xs tracking-wide transition-all duration-300 transform hover:scale-105"
+          className="px-4 py-2 bg-gradient-to-r from-yellow-500 to-yellow-400 hover:from-yellow-400 hover:to-yellow-300 text-black font-bold text-xs tracking-wide transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-yellow-500/50"
           style={{
-            clipPath: 'polygon(8% 0%, 92% 0%, 100% 50%, 92% 100%, 8% 100%, 0% 50%)'
+            clipPath: 'polygon(15% 0%, 85% 0%, 100% 35%, 90% 100%, 10% 100%, 0% 35%)',
+            border: '2px solid #000000',
           }}
         >
-          ZOOM IN
+          ⚡ ZOOM IN
         </button>
       </div>
-      
+
       {/* Instructions */}
-      <div className="absolute bottom-4 left-4 text-keystone-text-muted text-xs font-medium">
-        <p>Click nodes to explore • Drag to move • Double-click to focus</p>
+      <div className="absolute bottom-4 left-4 text-yellow-400 text-xs font-bold tracking-wide">
+        <p className="bg-black/50 px-3 py-1 rounded-lg border border-yellow-500/30">
+          ⚡ Click nodes to explore • Drag to move • Double-click to focus
+        </p>
       </div>
-      
+
       <NodeContextMenu
         visible={contextMenu.visible}
         x={contextMenu.x}

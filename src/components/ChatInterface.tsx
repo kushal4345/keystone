@@ -111,23 +111,45 @@ export const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({
   }), [documentId, isThinking]);
 
   return (
-    <div className="flex flex-col h-full bg-white">
+    <div 
+      className="flex flex-col h-full rounded-lg overflow-hidden"
+      style={{
+        background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
+        border: '2px solid #D4AF37',
+        boxShadow: '0 0 20px rgba(212, 175, 55, 0.2)',
+      }}
+    >
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-2">
+      <div className="flex-1 overflow-y-auto p-4 space-y-2" style={{ background: 'rgba(0,0,0,0.3)' }}>
         {messages.map(message => (
           <ChatMessage key={message.id} message={message} />
         ))}
         
         {isThinking && (
           <div className="flex space-x-3 justify-start mb-4">
-            <div className="flex-shrink-0 w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-              <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse" />
+            <div 
+              className="flex-shrink-0 w-8 h-8 flex items-center justify-center animate-pulse"
+              style={{
+                background: 'linear-gradient(135deg, #FFD700 0%, #D4AF37 100%)',
+                clipPath: 'polygon(15% 0%, 85% 0%, 100% 35%, 90% 100%, 10% 100%, 0% 35%)',
+                border: '2px solid #000000',
+              }}
+            >
+              <span className="text-black font-bold text-xs animate-bounce">⚡</span>
             </div>
-            <div className="bg-gray-100 px-4 py-3 rounded-2xl">
+            <div 
+              className="px-4 py-3"
+              style={{
+                background: 'linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%)',
+                border: '2px solid #D4AF37',
+                borderRadius: '12px',
+                clipPath: 'polygon(5% 0%, 95% 0%, 100% 25%, 90% 100%, 10% 100%, 0% 25%)',
+              }}
+            >
               <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                <div className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                <div className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                <div className="w-2 h-2 bg-yellow-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
             </div>
           </div>
@@ -137,7 +159,13 @@ export const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({
       </div>
 
       {/* Input */}
-      <div className="border-t border-gray-200 p-4">
+      <div 
+        className="p-4"
+        style={{
+          borderTop: '2px solid #D4AF37',
+          background: 'linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%)',
+        }}
+      >
         <form onSubmit={handleSubmit} className="flex space-x-3">
           <div className="flex-1 relative">
             <textarea
@@ -145,8 +173,13 @@ export const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Ask me anything about this document..."
-              className="w-full resize-none border border-gray-300 rounded-lg px-4 py-3 focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 min-h-[48px] max-h-[120px]"
+              placeholder="⚡ Ask me anything about this document..."
+              className="w-full resize-none px-4 py-3 transition-all duration-200 min-h-[48px] max-h-[120px] bg-black/50 text-yellow-400 placeholder-yellow-600 font-medium"
+              style={{
+                border: '2px solid #D4AF37',
+                borderRadius: '8px',
+                boxShadow: '0 0 10px rgba(212, 175, 55, 0.2)',
+              }}
               disabled={isThinking}
               rows={1}
             />
@@ -155,7 +188,11 @@ export const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({
           <button
             type="submit"
             disabled={!inputValue.trim() || isThinking}
-            className="flex-shrink-0 w-12 h-12 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-lg flex items-center justify-center transition-colors"
+            className="flex-shrink-0 w-12 h-12 bg-gradient-to-r from-yellow-500 to-yellow-400 hover:from-yellow-400 hover:to-yellow-300 disabled:from-gray-600 disabled:to-gray-500 disabled:cursor-not-allowed text-black font-bold flex items-center justify-center transition-all duration-300 transform hover:scale-105 shadow-lg hover:shadow-yellow-500/50"
+            style={{
+              clipPath: 'polygon(15% 0%, 85% 0%, 100% 35%, 90% 100%, 10% 100%, 0% 35%)',
+              border: '2px solid #000000',
+            }}
           >
             <Send size={18} />
           </button>

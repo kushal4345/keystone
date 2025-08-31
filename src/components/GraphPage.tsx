@@ -68,11 +68,16 @@ export function GraphPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 pt-20">
+    <div 
+      className="min-h-screen pt-20"
+      style={{
+        background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 30%, #1a1a1a 60%, #333333 100%)',
+      }}
+    >
       <div className="flex h-[calc(100vh-5rem)]">
         {/* Main Graph Canvas */}
         <div className="flex-1 p-6">
-          <div className="h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+          <div className="h-full rounded-xl overflow-hidden">
             <KnowledgeGraph 
               data={currentGraphData} 
               onNodeSelect={handleNodeSelect}
@@ -83,13 +88,22 @@ export function GraphPage() {
 
         {/* Chat Sidebar */}
         <div className="w-96 p-6 pl-0">
-          <div className="h-full bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-            <div className="border-b border-gray-200 px-6 py-4">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Ask Questions
+          <div className="h-full rounded-xl overflow-hidden">
+            <div 
+              className="px-6 py-4"
+              style={{
+                background: 'linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%)',
+                borderTopLeftRadius: '12px',
+                borderTopRightRadius: '12px',
+                border: '2px solid #D4AF37',
+                borderBottom: '2px solid #D4AF37',
+              }}
+            >
+              <h3 className="text-lg font-bold text-yellow-400 tracking-wide">
+                ⚡ KEYSTONE CHAT
               </h3>
-              <p className="text-sm text-gray-600 mt-1">
-                Explore the content through conversation
+              <p className="text-sm text-yellow-600 mt-1 font-medium">
+                Explore content through AI conversation
               </p>
             </div>
             <div className="h-[calc(100%-5rem)]">
