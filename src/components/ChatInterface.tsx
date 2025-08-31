@@ -1,7 +1,6 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { Send } from 'lucide-react';
 import { ChatMessage } from './ChatMessage';
-import { LoadingState } from './LoadingState';
 import type { ChatMessage as ChatMessageType } from '@/types';
 import { apiService } from '@/services/apiService';
 import { v4 as uuidv4 } from 'uuid';
@@ -10,10 +9,14 @@ interface ChatInterfaceProps {
   documentId: string;
 }
 
+export interface ChatInterfaceRef {
+  sendMessage: (message: string) => Promise<void>;
+}
+
 /**
  * Chat interface for document Q&A
  */
-export function ChatInterface({ documentId }: ChatInterfaceProps) {
+export const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({ documentId }, ref) => {
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [inputValue, setInputValue] = useState('');
   const [isThinking, setIsThinking] = useState(false);
@@ -39,20 +42,17 @@ export function ChatInterface({ documentId }: ChatInterfaceProps) {
     setMessages([welcomeMessage]);
   }, [documentId]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!inputValue.trim() || isThinking) return;
+  const handleMessageSubmission = async (messageContent: string) => {
+    if (!messageContent.trim() || isThinking) return;
 
     const userMessage: ChatMessageType = {
       id: uuidv4(),
       type: 'user',
-      content: inputValue.trim(),
+      content: messageContent.trim(),
       timestamp: new Date(),
     };
 
     setMessages(prev => [...prev, userMessage]);
-    setInputValue('');
     setIsThinking(true);
 
     try {
@@ -80,6 +80,12 @@ export function ChatInterface({ documentId }: ChatInterfaceProps) {
     }
   };
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    await handleMessageSubmission(inputValue);
+    setInputValue('');
+  };
+
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
@@ -98,6 +104,11 @@ export function ChatInterface({ documentId }: ChatInterfaceProps) {
   useEffect(() => {
     adjustTextareaHeight();
   }, [inputValue]);
+
+  // Expose sendMessage function to parent component
+  useImperativeHandle(ref, () => ({
+    sendMessage: handleMessageSubmission,
+  }), [documentId, isThinking]);
 
   return (
     <div className="flex flex-col h-full bg-white">
@@ -152,4 +163,4 @@ export function ChatInterface({ documentId }: ChatInterfaceProps) {
       </div>
     </div>
   );
-}
+});

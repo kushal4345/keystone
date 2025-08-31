@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Network } from 'vis-network';
 import { DataSet } from 'vis-data';
 import { NodeContextMenu } from './NodeContextMenu';
@@ -6,20 +6,21 @@ import type { GraphData, GraphNode } from '@/types';
 
 interface KnowledgeGraphProps {
   data: GraphData;
-  onNodeSelect?: (nodeId: number, nodeLabel: string) => void;
+  onNodeSelect?: (nodeId: string | number, nodeLabel: string) => void;
+  onNodeExplain?: (nodeLabel: string) => void;
 }
 
 /**
  * Interactive knowledge graph visualization
  */
-export function KnowledgeGraph({ data, onNodeSelect }: KnowledgeGraphProps) {
+export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const networkRef = useRef<Network | null>(null);
   const [contextMenu, setContextMenu] = useState<{
     visible: boolean;
     x: number;
     y: number;
-    nodeId: number | null;
+    nodeId: string | number | null;
     nodeLabel: string;
   }>({
     visible: false,
@@ -28,6 +29,18 @@ export function KnowledgeGraph({ data, onNodeSelect }: KnowledgeGraphProps) {
     nodeId: null,
     nodeLabel: '',
   });
+
+  const handleNodeClick = useCallback((nodeId: string | number, nodeLabel: string) => {
+    // Automatically explain the node when clicked
+    if (onNodeExplain) {
+      onNodeExplain(`Explain ${nodeLabel} in detail based on the document content.`);
+    }
+    
+    // Also trigger the old callback for backward compatibility
+    if (onNodeSelect) {
+      onNodeSelect(nodeId, nodeLabel);
+    }
+  }, [onNodeSelect, onNodeExplain]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -38,20 +51,44 @@ export function KnowledgeGraph({ data, onNodeSelect }: KnowledgeGraphProps) {
         label: node.label,
         level: node.level,
         color: {
-          background: getLevelColor(node.level || 0),
-          border: getLevelBorderColor(node.level || 0),
+          background: getKeystoneNodeColor(node.level || 0),
+          border: getKeystoneBorderColor(node.level || 0),
           highlight: {
-            background: getHighlightColor(node.level || 0),
-            border: getLevelBorderColor(node.level || 0),
+            background: '#FFD700', // Keystone gold highlight
+            border: '#D4AF37',
+          },
+          hover: {
+            background: getKeystoneHoverColor(node.level || 0),
+            border: '#D4AF37',
           }
         },
         font: {
-          size: 14,
-          color: '#374151',
+          size: 16,
+          color: '#1a1a1a',
           face: 'Inter, sans-serif',
+          bold: '600',
+          strokeWidth: 2,
+          strokeColor: '#ffffff',
         },
         shape: 'dot',
-        size: 20 + (3 - (node.level || 0)) * 5,
+        size: 25 + (3 - (node.level || 0)) * 8,
+        borderWidth: 3,
+        shadow: {
+          enabled: true,
+          color: 'rgba(212, 175, 55, 0.3)', // Keystone gold shadow
+          size: 8,
+          x: 3,
+          y: 3,
+        },
+        chosen: {
+          node: function(values: any, id: any, selected: boolean, hovering: boolean) {
+            if (hovering) {
+              values.shadow = true;
+              values.shadowSize = 15;
+              values.shadowColor = 'rgba(255, 215, 0, 0.6)';
+            }
+          }
+        }
       }))
     );
 
@@ -59,56 +96,120 @@ export function KnowledgeGraph({ data, onNodeSelect }: KnowledgeGraphProps) {
       data.edges.map(edge => ({
         from: edge.from ?? edge.source,
         to: edge.to ?? edge.target,
-        color: { color: '#9CA3AF', highlight: '#4F46E5' },
-        width: 2,
-        smooth: { type: 'continuous', roundness: 0.2 },
+        color: { 
+          color: '#666666', 
+          highlight: '#D4AF37',
+          hover: '#FFD700',
+          opacity: 0.8
+        },
+        width: 3,
+        smooth: { 
+          type: 'dynamic',
+          roundness: 0.3,
+          forceDirection: 'none'
+        },
+        arrows: {
+          to: { 
+            enabled: true, 
+            scaleFactor: 1.2,
+            type: 'arrow'
+          },
+        },
+        shadow: {
+          enabled: true,
+          color: 'rgba(0,0,0,0.1)',
+          size: 3,
+          x: 1,
+          y: 1,
+        }
       }))
     );
 
     const options = {
       layout: {
+        improvedLayout: true,
+        clusterThreshold: 150,
         hierarchical: {
-          enabled: true,
-          levelSeparation: 100,
-          nodeSpacing: 100,
-          treeSpacing: 200,
-          blockShifting: true,
-          edgeMinimization: true,
-          parentCentralization: true,
-          direction: 'UD',
-          sortMethod: 'directed',
+          enabled: false, // Disable rigid hierarchy
         },
+        randomSeed: 42, // Consistent layout
       },
       physics: {
-        enabled: false,
+        enabled: true,
+        stabilization: {
+          enabled: true,
+          iterations: 200,
+          updateInterval: 25,
+          onlyDynamicEdges: false,
+          fit: true
+        },
+        barnesHut: {
+          gravitationalConstant: -8000,
+          centralGravity: 0.3,
+          springLength: 120,
+          springConstant: 0.04,
+          damping: 0.09,
+          avoidOverlap: 0.1
+        },
+        maxVelocity: 50,
+        minVelocity: 0.1,
+        solver: 'barnesHut',
+        timestep: 0.35,
+        adaptiveTimestep: true
       },
       interaction: {
         hover: true,
+        hoverConnectedEdges: true,
         selectConnectedEdges: false,
+        dragNodes: true,
+        dragView: true,
+        zoomView: true,
+        multiselect: false,
+        navigationButtons: true,
+        keyboard: {
+          enabled: true,
+          speed: { x: 10, y: 10, zoom: 0.02 },
+          bindToWindow: false
+        }
       },
       nodes: {
-        borderWidth: 2,
-        shadow: {
-          enabled: true,
-          color: 'rgba(0,0,0,0.1)',
-          size: 5,
-          x: 2,
-          y: 2,
+        borderWidth: 3,
+        scaling: {
+          min: 20,
+          max: 40,
+          label: {
+            enabled: true,
+            min: 14,
+            max: 20,
+            maxVisible: 30,
+            drawThreshold: 5
+          }
         },
+        margin: 10,
       },
       edges: {
-        arrows: {
-          to: { enabled: true, scaleFactor: 0.8 },
+        scaling: {
+          min: 1,
+          max: 5,
+          label: {
+            enabled: false
+          }
         },
+        selectionWidth: 2,
+        hoverWidth: 1.5
       },
+      configure: {
+        enabled: false
+      }
     };
 
     const network = new Network(containerRef.current, { nodes, edges }, options);
     networkRef.current = network;
 
-    // Handle node hover
+    // Handle node interactions
     let hoverTimeout: NodeJS.Timeout | null = null;
 
+    // Enhanced hover effects
     network.on('hoverNode', (event) => {
       const nodeId = event.node;
       const node = data.nodes.find(n => n.id === nodeId);
@@ -117,17 +218,24 @@ export function KnowledgeGraph({ data, onNodeSelect }: KnowledgeGraphProps) {
         const rect = containerRef.current.getBoundingClientRect();
         const canvasPosition = network.canvasToDOM({ x: event.pointer.canvas.x, y: event.pointer.canvas.y });
         
+        // Clear existing timeout
         if (hoverTimeout) clearTimeout(hoverTimeout);
         
+        // Show context menu after short delay
         hoverTimeout = setTimeout(() => {
           setContextMenu({
             visible: true,
             x: rect.left + canvasPosition.x,
-            y: rect.top + canvasPosition.y,
+            y: rect.top + canvasPosition.y - 10,
             nodeId: nodeId,
             nodeLabel: node.label,
           });
-        }, 500);
+        }, 300); // Reduced delay for better responsiveness
+        
+        // Change cursor
+        if (containerRef.current) {
+          containerRef.current.style.cursor = 'pointer';
+        }
       }
     });
 
@@ -136,19 +244,53 @@ export function KnowledgeGraph({ data, onNodeSelect }: KnowledgeGraphProps) {
         clearTimeout(hoverTimeout);
         hoverTimeout = null;
       }
-      setContextMenu(prev => ({ ...prev, visible: false }));
+      
+      // Hide context menu with small delay to prevent flickering
+      setTimeout(() => {
+        setContextMenu(prev => ({ ...prev, visible: false }));
+      }, 100);
+      
+      // Reset cursor
+      if (containerRef.current) {
+        containerRef.current.style.cursor = 'default';
+      }
     });
 
+    // Handle clicks for RAG requests
     network.on('click', (event) => {
       setContextMenu(prev => ({ ...prev, visible: false }));
       
       if (event.nodes.length > 0) {
         const nodeId = event.nodes[0];
         const node = data.nodes.find(n => n.id === nodeId);
-        if (node && onNodeSelect) {
-          onNodeSelect(nodeId, node.label);
+        if (node) {
+          handleNodeClick(nodeId, node.label);
         }
       }
+    });
+
+    // Handle double-click for zoom to node
+    network.on('doubleClick', (event) => {
+      if (event.nodes.length > 0) {
+        const nodeId = event.nodes[0];
+        network.focus(nodeId, {
+          scale: 1.5,
+          animation: {
+            duration: 800,
+            easingFunction: 'easeInOutQuad'
+          }
+        });
+      }
+    });
+
+    // Fit the network initially
+    network.once('stabilizationIterationsDone', () => {
+      network.fit({
+        animation: {
+          duration: 1000,
+          easingFunction: 'easeInOutQuad'
+        }
+      });
     });
 
     return () => {
@@ -176,12 +318,47 @@ export function KnowledgeGraph({ data, onNodeSelect }: KnowledgeGraphProps) {
   };
 
   return (
-    <>
+    <div className="relative w-full h-full">
       <div 
         ref={containerRef} 
-        className="w-full h-full bg-gray-50 rounded-lg"
+        className="w-full h-full bg-gradient-to-br from-keystone-primary via-gray-900 to-black rounded-lg border-2 border-keystone-accent/20 shadow-2xl"
         onMouseLeave={() => setContextMenu(prev => ({ ...prev, visible: false }))}
+        style={{
+          background: 'linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 50%, #1a1a1a 100%)',
+        }}
       />
+      
+      {/* Graph Controls */}
+      <div className="absolute top-4 right-4 flex space-x-2">
+        <button
+          onClick={() => networkRef.current?.fit({ animation: { duration: 800 } })}
+          className="px-3 py-2 bg-keystone-accent/80 hover:bg-keystone-accent text-black font-bold text-xs tracking-wide transition-all duration-300 transform hover:scale-105"
+          style={{
+            clipPath: 'polygon(8% 0%, 92% 0%, 100% 50%, 92% 100%, 8% 100%, 0% 50%)'
+          }}
+        >
+          FIT VIEW
+        </button>
+        <button
+          onClick={() => {
+            if (networkRef.current) {
+              const scale = networkRef.current.getScale();
+              networkRef.current.moveTo({ scale: scale * 1.2 });
+            }
+          }}
+          className="px-3 py-2 bg-keystone-accent/80 hover:bg-keystone-accent text-black font-bold text-xs tracking-wide transition-all duration-300 transform hover:scale-105"
+          style={{
+            clipPath: 'polygon(8% 0%, 92% 0%, 100% 50%, 92% 100%, 8% 100%, 0% 50%)'
+          }}
+        >
+          ZOOM IN
+        </button>
+      </div>
+      
+      {/* Instructions */}
+      <div className="absolute bottom-4 left-4 text-keystone-text-muted text-xs font-medium">
+        <p>Click nodes to explore • Drag to move • Double-click to focus</p>
+      </div>
       
       <NodeContextMenu
         visible={contextMenu.visible}
@@ -191,22 +368,37 @@ export function KnowledgeGraph({ data, onNodeSelect }: KnowledgeGraphProps) {
         onGenerateQuiz={handleGenerateQuiz}
         onCreateFlashcards={handleCreateFlashcards}
       />
-    </>
+    </div>
   );
 }
 
-// Helper functions for node styling
-function getLevelColor(level: number): string {
-  const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444'];
+// Keystone-themed color functions
+function getKeystoneNodeColor(level: number): string {
+  const colors = [
+    '#D4AF37', // Level 0: Gold
+    '#B8860B', // Level 1: Dark goldenrod
+    '#CD853F', // Level 2: Peru
+    '#A0522D', // Level 3: Sienna
+  ];
   return colors[Math.min(level, colors.length - 1)];
 }
 
-function getLevelBorderColor(level: number): string {
-  const colors = ['#1D4ED8', '#059669', '#D97706', '#DC2626'];
+function getKeystoneBorderColor(level: number): string {
+  const colors = [
+    '#B8860B', // Level 0: Dark goldenrod
+    '#8B7355', // Level 1: Dark khaki
+    '#8B4513', // Level 2: Saddle brown
+    '#654321', // Level 3: Dark brown
+  ];
   return colors[Math.min(level, colors.length - 1)];
 }
 
-function getHighlightColor(level: number): string {
-  const colors = ['#60A5FA', '#34D399', '#FBBF24', '#F87171'];
+function getKeystoneHoverColor(level: number): string {
+  const colors = [
+    '#FFD700', // Level 0: Bright gold
+    '#DAA520', // Level 1: Goldenrod
+    '#DEB887', // Level 2: Burlywood
+    '#BC8F8F', // Level 3: Rosy brown
+  ];
   return colors[Math.min(level, colors.length - 1)];
 }

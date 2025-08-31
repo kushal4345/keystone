@@ -1,7 +1,7 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useParams } from 'react-router-dom';
 import { KnowledgeGraph } from './KnowledgeGraph';
-import { ChatInterface } from './ChatInterface';
+import { ChatInterface, type ChatInterfaceRef } from './ChatInterface';
 import { useApp } from '@/context/AppContext';
 import { apiService } from '@/services/apiService';
 
@@ -11,6 +11,7 @@ import { apiService } from '@/services/apiService';
 export function GraphPage() {
   const { documentId } = useParams<{ documentId: string }>();
   const { isOnline, setCurrentDocumentId, currentGraphData } = useApp();
+  const chatRef = useRef<ChatInterfaceRef>(null);
 
   useEffect(() => {
     if (documentId) {
@@ -26,10 +27,20 @@ export function GraphPage() {
   // No longer needed since graph data comes from context
   // const loadGraphData = async (docId: string) => { ... }
 
-  const handleNodeSelect = (nodeId: number, nodeLabel: string) => {
+  const handleNodeSelect = (nodeId: string | number, nodeLabel: string) => {
     // This will trigger a question in the chat interface
-    // The actual implementation would depend on how you want to handle this
     console.log('Node selected:', nodeId, nodeLabel);
+  };
+
+  const handleNodeExplain = async (message: string) => {
+    // Send message to chat interface
+    if (chatRef.current) {
+      try {
+        await chatRef.current.sendMessage(message);
+      } catch (error) {
+        console.error('Failed to send message to chat:', error);
+      }
+    }
   };
 
   if (!documentId) {
@@ -65,6 +76,7 @@ export function GraphPage() {
             <KnowledgeGraph 
               data={currentGraphData} 
               onNodeSelect={handleNodeSelect}
+              onNodeExplain={handleNodeExplain}
             />
           </div>
         </div>
@@ -81,7 +93,7 @@ export function GraphPage() {
               </p>
             </div>
             <div className="h-[calc(100%-5rem)]">
-              <ChatInterface documentId={documentId} />
+              <ChatInterface ref={chatRef} documentId={documentId} />
             </div>
           </div>
         </div>
