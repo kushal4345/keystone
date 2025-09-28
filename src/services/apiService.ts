@@ -1,4 +1,11 @@
 import type { GraphData, ProcessDocumentResponse, AskQuestionResponse } from '@/types';
+import { 
+  processPdfOffline, 
+  getSummaryOffline, 
+  chatWithTopicOffline, 
+  summarizeLegalDocumentOffline,
+  isOnline 
+} from './offlineService';
 
 /**
  * API service abstraction layer
@@ -36,7 +43,7 @@ class ApiService {
    */
   async processDocument(source: File | string): Promise<ProcessDocumentResponse> {
     try {
-      if (this.isOnline) {
+      if (this.isOnline && isOnline()) {
         return this.processDocumentOnline(source);
       } else {
         return this.processDocumentOffline(source);
@@ -68,7 +75,7 @@ class ApiService {
    */
   async askQuestion(documentId: string, question: string): Promise<AskQuestionResponse> {
     try {
-      if (this.isOnline) {
+      if (this.isOnline && isOnline()) {
         return this.askQuestionOnline(documentId, question);
       } else {
         return this.askQuestionOffline(documentId, question);
@@ -84,10 +91,10 @@ class ApiService {
    */
   async getSummary(documentId: string, topic: string): Promise<{ summary: string }> {
     try {
-      if (this.isOnline) {
+      if (this.isOnline && isOnline()) {
         return this.getSummaryOnline(documentId, topic);
       } else {
-        throw new Error('Summary functionality not available in offline mode');
+        return getSummaryOffline(topic);
       }
     } catch (error) {
       console.error('Summary generation error:', error);
@@ -100,10 +107,10 @@ class ApiService {
    */
   async summarizeLegalDocument(file: File): Promise<{ summary: string }> {
     try {
-      if (this.isOnline) {
+      if (this.isOnline && isOnline()) {
         return this.summarizeLegalDocumentOnline(file);
       } else {
-        throw new Error('Document summarization not available in offline mode');
+        return summarizeLegalDocumentOffline(file);
       }
     } catch (error) {
       console.error('Document summarization error:', error);
@@ -114,18 +121,19 @@ class ApiService {
   // Private methods for offline mode (Electron IPC)
 
   private async processDocumentOffline(source: File | string): Promise<ProcessDocumentResponse> {
-    let filePath: string;
-
     if (typeof source === 'string') {
       // Handle YouTube URL
       throw new Error('YouTube processing not implemented in offline mode');
     } else {
-      // Handle file upload
-      filePath = source.path || source.name;
+      // Handle file upload using LangChain offline service
+      const result = await processPdfOffline(source);
+      return {
+        documentId: result.index_name,
+        title: source.name || 'Processed Document',
+        status: 'success' as const,
+        graphData: result.graphData
+      };
     }
-
-    const result = await window.electronAPI.processDocument(filePath);
-    return result;
   }
 
   private async fetchGraphDataOffline(documentId: string): Promise<GraphData> {
@@ -133,7 +141,11 @@ class ApiService {
   }
 
   private async askQuestionOffline(documentId: string, question: string): Promise<AskQuestionResponse> {
-    return window.electronAPI.askQuestion(documentId, question);
+    const result = await chatWithTopicOffline(documentId, question);
+    return {
+      answer: result.ai_response,
+      sources: [] // Offline mode doesn't return sources
+    };
   }
 
   // Private methods for online mode (HTTP API)

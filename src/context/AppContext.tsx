@@ -10,6 +10,8 @@ interface AppContextType {
   setIsLoading: (loading: boolean) => void;
   currentGraphData: GraphData | null;
   setCurrentGraphData: (data: GraphData | null) => void;
+  modeSelected: boolean;
+  setModeSelected: (selected: boolean) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -27,6 +29,7 @@ export function AppProvider({ children }: AppProviderProps) {
   const [currentDocumentId, setCurrentDocumentId] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [currentGraphData, setCurrentGraphData] = useState<GraphData | null>(null);
+  const [modeSelected, setModeSelected] = useState(false);
 
   // Auto-detect online/offline status
   React.useEffect(() => {
@@ -54,6 +57,8 @@ export function AppProvider({ children }: AppProviderProps) {
     setIsLoading,
     currentGraphData,
     setCurrentGraphData,
+    modeSelected,
+    setModeSelected,
   };
 
   return (
