@@ -20,7 +20,7 @@ class ApiService {
       return '';
     } else {
       // Use full URL for Electron or production builds
-      return 'https://hybrid-ai-tutor-1.onrender.com';
+      return 'https://hybrid-ai-tutor-2.onrender.com';
     }
   }
 
@@ -92,6 +92,22 @@ class ApiService {
     } catch (error) {
       console.error('Summary generation error:', error);
       throw new Error('Failed to generate summary');
+    }
+  }
+
+  /**
+   * Summarize the entire legal document
+   */
+  async summarizeLegalDocument(file: File): Promise<{ summary: string }> {
+    try {
+      if (this.isOnline) {
+        return this.summarizeLegalDocumentOnline(file);
+      } else {
+        throw new Error('Document summarization not available in offline mode');
+      }
+    } catch (error) {
+      console.error('Document summarization error:', error);
+      throw new Error('Failed to summarize document');
     }
   }
 
@@ -197,6 +213,23 @@ class ApiService {
         topic: topic,
         index_name: 'nerv', // Using the fixed index name from backend
       }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+    }
+
+    return response.json();
+  }
+
+  private async summarizeLegalDocumentOnline(file: File): Promise<{ summary: string }> {
+    const formData = new FormData();
+    formData.append('file', file);
+
+    const response = await fetch(`${this.baseUrl}/api/summarize-legal-document`, {
+      method: 'POST',
+      body: formData,
     });
 
     if (!response.ok) {

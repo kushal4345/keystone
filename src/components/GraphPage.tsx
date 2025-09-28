@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { KnowledgeGraph } from './KnowledgeGraph';
 import { ChatInterface, type ChatInterfaceRef } from './ChatInterface';
 import { useApp } from '@/context/AppContext';
 import { apiService } from '@/services/apiService';
+import { ArrowLeft } from 'lucide-react';
 
 /**
  * Main graph workspace with three-panel layout
@@ -11,6 +12,7 @@ import { apiService } from '@/services/apiService';
 export function GraphPage() {
   const { documentId } = useParams<{ documentId: string }>();
   const { isOnline, setCurrentDocumentId, currentGraphData } = useApp();
+  const navigate = useNavigate();
   const chatRef = useRef<ChatInterfaceRef>(null);
   const [chatWidth, setChatWidth] = useState(384); // 384px = w-96
   const [isDragging, setIsDragging] = useState(false);
@@ -103,6 +105,10 @@ export function GraphPage() {
     );
   }
 
+  const handleBackToHome = () => {
+    navigate('/');
+  };
+
   return (
     <div 
       className="min-h-screen"
@@ -110,7 +116,26 @@ export function GraphPage() {
         background: '#1a1a1a',
       }}
     >
-      <div className="flex h-screen">
+      {/* Header with back button */}
+      <div className="p-4 border-b border-gray-700 bg-gray-900">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={handleBackToHome}
+            className="flex items-center space-x-2 text-yellow-400 hover:text-yellow-300 transition-colors"
+          >
+            <ArrowLeft size={20} />
+            <span className="font-medium">Back to Home</span>
+          </button>
+          
+          <h1 className="text-lg font-semibold text-white">
+            Knowledge Graph Analysis
+          </h1>
+          
+          <div className="w-24"></div> {/* Spacer for centering */}
+        </div>
+      </div>
+
+      <div className="flex h-[calc(100vh-73px)]">
         {/* Main Graph Canvas */}
         <div className="flex-1">
           <KnowledgeGraph 
@@ -129,7 +154,7 @@ export function GraphPage() {
         {/* Chat Sidebar */}
         <div 
           className="border-l border-gray-700 flex flex-col"
-          style={{ width: chatWidth, height: '100vh' }}
+          style={{ width: chatWidth, height: '100%' }}
         >
           <div className="px-4 py-3 bg-gray-900 border-b border-gray-700 flex-shrink-0">
             <h3 className="text-base font-semibold text-white">

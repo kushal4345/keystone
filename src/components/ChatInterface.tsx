@@ -42,25 +42,6 @@ export const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({
     setMessages([welcomeMessage]);
   }, [documentId]);
 
-  const cleanResponse = (text: string): string => {
-    return text
-      // Remove markdown headers
-      .replace(/#{1,6}\s*/g, '')
-      // Remove markdown bold/italic
-      .replace(/\*\*(.*?)\*\*/g, '$1')
-      .replace(/\*(.*?)\*/g, '$1')
-      // Remove markdown links
-      .replace(/\[(.*?)\]\(.*?\)/g, '$1')
-      // Remove HTML entities
-      .replace(/&amp;/g, '&')
-      .replace(/&lt;/g, '<')
-      .replace(/&gt;/g, '>')
-      .replace(/&quot;/g, '"')
-      .replace(/&#39;/g, "'")
-      // Remove extra whitespace
-      .replace(/\n\s*\n/g, '\n\n')
-      .trim();
-  };
 
   const handleMessageSubmission = async (messageContent: string) => {
     if (!messageContent.trim() || isThinking) return;
@@ -81,7 +62,7 @@ export const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({
       const aiMessage: ChatMessageType = {
         id: uuidv4(),
         type: 'ai',
-        content: cleanResponse(response.answer),
+        content: response.answer, // Don't clean here, let ChatMessage handle formatting
         timestamp: new Date(),
       };
 
@@ -181,6 +162,7 @@ export const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({
             type="submit"
             disabled={!inputValue.trim() || isThinking}
             className="flex-shrink-0 w-12 h-12 bg-yellow-500 hover:bg-yellow-400 disabled:bg-gray-600 disabled:cursor-not-allowed text-black rounded-lg flex items-center justify-center transition-colors"
+            aria-label="Send message"
           >
             <Send size={18} />
           </button>
