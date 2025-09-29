@@ -81,7 +81,7 @@ export function FileUpload({ onFileSelect, isLoading, error }: FileUploadProps) 
           clipPath: 'polygon(8% 0%, 92% 0%, 100% 15%, 96% 100%, 4% 100%, 0% 15%)',
           background: isDragging || isPdfHovered 
             ? 'linear-gradient(135deg, #D4AF37 0%, #FFD700 50%, #D4AF37 100%)' 
-            : '#2a2a2a',
+            : '#000000',
             // this here is the deafault background color for the boxes, tinker with the colors to see.
           transition: 'background 300ms ease-in-out'
         }}

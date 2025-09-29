@@ -125,7 +125,7 @@ export function GraphPage() {
   // Demo data loads automatically, but show loading state briefly if needed
   if (!currentGraphData) {
     return (
-      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400 mx-auto mb-4"></div>
           <h2 className="text-xl font-medium text-white mb-2">Loading Demo</h2>
@@ -147,13 +147,13 @@ export function GraphPage() {
     <div 
       className="min-h-screen"
       style={{
-        background: '#1a1a1a',
+        background: '#000000',
       }}
     >
       {/* Floating Back Button */}
       <button
         onClick={handleBackToHome}
-        className="fixed top-4 left-4 z-50 flex items-center space-x-2 px-3 py-2 bg-gray-900/90 backdrop-blur-sm border border-gray-700 rounded-lg text-yellow-400 hover:text-yellow-300 hover:bg-gray-800/90 transition-all duration-200 shadow-lg"
+        className="fixed top-4 left-4 z-50 flex items-center space-x-2 px-3 py-2 bg-black/90 backdrop-blur-sm border border-gray-600 rounded-lg text-yellow-400 hover:text-yellow-300 hover:bg-black/95 transition-all duration-200 shadow-lg"
       >
         <ArrowLeft size={18} />
         <span className="font-medium text-sm">Back to Home</span>
@@ -201,7 +201,7 @@ export function GraphPage() {
           className="border-l border-gray-700 flex flex-col"
           style={{ width: chatWidth, height: '100%' }}
         >
-          <div className="px-4 py-3 bg-gray-900 border-b border-gray-700 flex-shrink-0">
+          <div className="px-4 py-3 bg-black border-b border-gray-700 flex-shrink-0">
             <h3 className="text-base font-semibold text-white">
               Chat
             </h3>

@@ -376,7 +376,7 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
         className="w-full h-full"
         onMouseLeave={() => setContextMenu(prev => ({ ...prev, visible: false }))}
         style={{
-          background: '#2a2a2a',
+          background: '#000000',
         }}
       />
 
@@ -403,7 +403,7 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
 
       {/* Instructions */}
       <div className="absolute bottom-4 left-4 text-gray-400 text-xs">
-        <p className="bg-black/70 px-3 py-1 rounded">
+        <p className="bg-black/80 px-3 py-1 rounded">
           Click nodes to explore • Drag to move • Double-click to focus
         </p>
       </div>

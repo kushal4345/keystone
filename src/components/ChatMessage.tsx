@@ -24,7 +24,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
         <div className={`px-4 py-3 rounded-lg ${
           isUser 
             ? 'bg-yellow-500 text-black' 
-            : 'bg-gray-800 text-white'
+            : 'bg-black border border-gray-700 text-white'
         }`}>
           {isUser ? (
             <p className="text-sm leading-relaxed whitespace-pre-wrap">
@@ -63,7 +63,7 @@ export function ChatMessage({ message }: ChatMessageProps) {
       </div>
 
       {isUser && (
-        <div className="flex-shrink-0 w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
+        <div className="flex-shrink-0 w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center">
           <User size={14} className="text-gray-300" />
         </div>
       )}
