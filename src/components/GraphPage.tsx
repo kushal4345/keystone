@@ -10,7 +10,7 @@ import { apiService } from '@/services/apiService';
 import { generateSampleLegalData } from '@/utils/sampleEventData';
 import { ExportService } from '@/services/exportService';
 import type { ExportOptions } from '@/services/exportService';
-import type { GraphData } from '@/types';
+import type { GraphData, GraphNode, GraphEdge } from '@/types';
 import { ArrowLeft, Download } from 'lucide-react';
 
 /**
@@ -40,6 +40,9 @@ export function GraphPage() {
   // Global variables for contextual summary
   const [graphData, setGraphData] = useState<GraphData | null>(null);
   const [indexName, setIndexName] = useState<string>('nerv');
+  
+  // Hover state for timeline-graph interaction
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
   useEffect(() => {
     if (documentId) {
@@ -87,54 +90,75 @@ This agreement includes standard legal protections, intellectual property clause
     apiService.setOnlineMode(isOnline);
   }, [isOnline]);
 
-  // No longer needed since graph data comes from context
-  // const loadGraphData = async (docId: string) => { ... }
+  // Traceability analysis function (for internal use only)
+  const analyzeNodeConnections = useCallback((nodeId: string, graphData: GraphData) => {
+    if (!graphData) return null;
 
-  // New contextual summary function for traceability
-  const getContextualSummary = async (clickedNodeId: string) => {
-    if (!graphData) {
-      console.error('Graph data not available');
-      return;
-    }
+    const node = graphData.nodes.find(n => n.id.toString() === nodeId);
+    if (!node) return null;
 
-    try {
-      const result = await apiService.getContextualSummary(clickedNodeId, graphData, indexName);
-      
-      // Send the summary to chat interface
-      if (chatRef.current) {
-        const clickedNode = graphData.nodes.find(n => n.id === clickedNodeId);
-        const nodeLabel = clickedNode ? clickedNode.label : 'Unknown';
-        const message = `Contextual summary for "${nodeLabel}": ${result.summary}`;
-        await chatRef.current.sendMessage(message);
+    // Find all edges connected to this node
+    const connectedEdges = graphData.edges.filter(edge => 
+      edge.source.toString() === nodeId || edge.target.toString() === nodeId
+    );
+
+    // Find connected nodes
+    const connectedNodeIds = new Set<string>();
+    connectedEdges.forEach(edge => {
+      if (edge.source.toString() === nodeId) {
+        connectedNodeIds.add(edge.target.toString());
       }
-    } catch (error) {
-      console.error('Failed to get contextual summary:', error);
-      
-      // Fallback to simple explanation
-      if (chatRef.current) {
-        const clickedNode = graphData.nodes.find(n => n.id === clickedNodeId);
-        const nodeLabel = clickedNode ? clickedNode.label : 'Unknown';
-        const fallbackMessage = `Explain ${nodeLabel} in detail based on the document content.`;
-        await chatRef.current.sendMessage(fallbackMessage);
+      if (edge.target.toString() === nodeId) {
+        connectedNodeIds.add(edge.source.toString());
       }
-    }
-  };
+    });
 
-  const handleNodeSelect = (nodeId: string | number, nodeLabel: string) => {
-    // Use the new contextual summary functionality
-    getContextualSummary(nodeId.toString());
-  };
+    const connectedNodes = graphData.nodes.filter(n => 
+      connectedNodeIds.has(n.id.toString())
+    );
 
-  const handleNodeExplain = async (message: string) => {
-    // Send message to chat interface
+    // Analyze relationships
+    const outgoingConnections = connectedEdges.filter(edge => edge.source.toString() === nodeId);
+    const incomingConnections = connectedEdges.filter(edge => edge.target.toString() === nodeId);
+
+    return {
+      node,
+      connectedNodes,
+      connectedEdges,
+      outgoingConnections,
+      incomingConnections,
+      connectionCount: connectedNodeIds.size
+    };
+  }, []);
+
+  // Simple node selection - sends clean message to chat
+  const handleNodeSelect = useCallback((nodeId: string | number, nodeLabel: string) => {
+    // Send a simple, clean message to the chat
     if (chatRef.current) {
-      try {
-        await chatRef.current.sendMessage(message);
-      } catch (error) {
-        console.error('Failed to send message to chat:', error);
+      const message = `Tell me more about "${nodeLabel}".`;
+      chatRef.current.sendMessage(message);
+    }
+
+    // Perform internal traceability analysis (hidden from user)
+    if (graphData) {
+      const analysis = analyzeNodeConnections(nodeId.toString(), graphData);
+      if (analysis) {
+        // Log detailed analysis to console for debugging/development
+        console.log('Node Analysis:', {
+          node: analysis.node,
+          connections: analysis.connectionCount,
+          connectedNodes: analysis.connectedNodes.map(n => n.label),
+          outgoing: analysis.outgoingConnections.length,
+          incoming: analysis.incomingConnections.length
+        });
       }
     }
-  };
+  }, [graphData, analyzeNodeConnections]);
+
+  // Handle node hover from timeline
+  const handleNodeHover = useCallback((nodeId: string | null) => {
+    setHoveredNodeId(nodeId);
+  }, []);
 
   const handleMouseDown = useCallback(() => {
     setIsDragging(true);
@@ -275,7 +299,8 @@ This agreement includes standard legal protections, intellectual property clause
             <KnowledgeGraph 
               data={currentGraphData} 
               onNodeSelect={handleNodeSelect}
-              onNodeExplain={handleNodeExplain}
+              onNodeHover={handleNodeHover}
+              hoveredNodeId={hoveredNodeId}
             />
           </div>
           
@@ -295,6 +320,7 @@ This agreement includes standard legal protections, intellectual property clause
             <TimelineView 
               isCollapsed={isTimelineCollapsed}
               onToggleCollapse={toggleTimelineCollapse}
+              onNodeHover={handleNodeHover}
             />
           </div>
         </div>

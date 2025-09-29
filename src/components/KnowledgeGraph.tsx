@@ -8,13 +8,14 @@ import type { GraphData } from '@/types';
 interface KnowledgeGraphProps {
   data: GraphData;
   onNodeSelect?: (nodeId: string | number, nodeLabel: string) => void;
-  onNodeExplain?: (nodeLabel: string) => void;
+  onNodeHover?: (nodeId: string | null) => void;
+  hoveredNodeId?: string | null;
 }
 
 /**
  * Interactive knowledge graph visualization
  */
-export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeGraphProps) {
+export function KnowledgeGraph({ data, onNodeSelect, onNodeHover, hoveredNodeId }: KnowledgeGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const networkRef = useRef<Network | null>(null);
   const { selectedEventId, setSelectedEventId, annotations, selectedTarget, setSelectedTarget } = useApp();
@@ -33,16 +34,60 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
   });
 
   const handleNodeClick = useCallback((nodeId: string | number, nodeLabel: string) => {
-    // Automatically explain the node when clicked
-    if (onNodeExplain) {
-      onNodeExplain(`Explain ${nodeLabel} in detail based on the document content.`);
-    }
-
-    // Also trigger the old callback for backward compatibility
+    // Only trigger the node select callback - don't auto-explain to prevent reload
     if (onNodeSelect) {
       onNodeSelect(nodeId, nodeLabel);
     }
-  }, [onNodeSelect, onNodeExplain]);
+  }, [onNodeSelect]);
+
+  // Effect to handle hovered node highlighting
+  useEffect(() => {
+    if (!networkRef.current || !data.nodes) return;
+
+    const nodesDataSet = (networkRef.current as any).body.data.nodes as DataSet<any>;
+    
+    const updatedNodes = data.nodes.map(node => {
+      const isSelectedEvent = selectedEventId && node.id.toString() === selectedEventId;
+      const isHovered = hoveredNodeId && node.id.toString() === hoveredNodeId;
+      
+      const getColorFromString = (colorStr?: string) => {
+        switch (colorStr) {
+          case 'red': return '#DC2626';
+          case 'yellow': return '#FBBF24';
+          case 'green': return '#059669';
+          default: return getKeystoneNodeColor(node.level || 0);
+        }
+      };
+
+      let backgroundColor = getColorFromString(node.color);
+      
+      if (isSelectedEvent) {
+        backgroundColor = '#FF6B35';
+      } else if (isHovered) {
+        // Add a subtle highlight for hovered nodes
+        backgroundColor = getColorFromString(node.color);
+      }
+
+      return {
+        id: node.id,
+        color: {
+          background: backgroundColor,
+          border: isSelectedEvent ? '#FF4500' : isHovered ? '#FFD700' : undefined,
+        },
+        size: isSelectedEvent ? 40 : isHovered ? 35 : (25 + (3 - (node.level || 0)) * 8),
+        borderWidth: isSelectedEvent ? 4 : isHovered ? 3 : 2,
+        shadow: isHovered ? {
+          enabled: true,
+          color: 'rgba(255, 215, 0, 0.5)',
+          size: 10,
+          x: 2,
+          y: 2,
+        } : undefined
+      };
+    });
+
+    nodesDataSet.update(updatedNodes);
+  }, [hoveredNodeId, selectedEventId, data.nodes]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -54,10 +99,20 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
         const hasAnnotations = annotations[node.id.toString()]?.length > 0;
         const isSelectedTarget = selectedTarget?.id === node.id.toString() && selectedTarget?.type === 'node';
         
+        // Convert API color strings to hex values
+        const getColorFromString = (colorStr?: string) => {
+          switch (colorStr) {
+            case 'red': return '#DC2626';
+            case 'yellow': return '#FBBF24';
+            case 'green': return '#059669';
+            default: return getKeystoneNodeColor(node.level || 0);
+          }
+        };
+
         // Determine node colors based on API color property or fallback to level-based colors
         const nodeBackgroundColor = isSelectedEvent ? '#FF6B35' : 
                                    isSelectedTarget ? '#8B5CF6' :
-                                   node.color ? node.color : getKeystoneNodeColor(node.level || 0);
+                                   getColorFromString(node.color);
         
         // Determine font color based on background color for better readability
         const fontColor = node.color && (node.color === 'red' || node.color === 'green') ? '#FFFFFF' : 
@@ -79,7 +134,7 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
               border: '#D4AF37',
             },
             hover: {
-              background: node.color ? node.color : getKeystoneHoverColor(node.level || 0),
+              background: node.color ? getColorFromString(node.color) : getKeystoneHoverColor(node.level || 0),
               border: '#D4AF37',
             }
           },
@@ -258,6 +313,11 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
         if (containerRef.current) {
           containerRef.current.style.cursor = 'pointer';
         }
+
+        // Notify parent component about hover
+        if (onNodeHover) {
+          onNodeHover(nodeId.toString());
+        }
       }
     });
 
@@ -275,6 +335,11 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
       // Reset cursor
       if (containerRef.current) {
         containerRef.current.style.cursor = 'default';
+      }
+
+      // Notify parent component about hover end
+      if (onNodeHover) {
+        onNodeHover(null);
       }
     });
 
@@ -304,12 +369,13 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
       } else if (event.edges.length > 0) {
         const edgeIndex = event.edges[0];
         const edgeData = edges.get(edgeIndex);
-        if (edgeData) {
+        if (edgeData && typeof edgeData === 'object' && 'edgeId' in edgeData) {
+          const edge = edgeData as any;
           // Set selected target for edge annotations
           setSelectedTarget({
-            id: edgeData.edgeId,
+            id: edge.edgeId,
             type: 'edge',
-            label: `Edge: ${edgeData.from} → ${edgeData.to}`
+            label: `Edge: ${edge.from} → ${edge.to}`
           });
         }
       } else {
@@ -351,44 +417,40 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
         clearTimeout(hoverTimeout);
       }
     };
-  }, [data, onNodeSelect, selectedEventId, annotations, selectedTarget]);
+  }, [data, selectedEventId, annotations, selectedTarget, handleNodeClick, onNodeHover]);
 
   // Effect to handle selectedEventId changes from timeline
   useEffect(() => {
     if (!networkRef.current || !data.nodes) return;
 
-    // Update node appearance based on selection
+    const nodesDataSet = (networkRef.current as any).body.data.nodes as DataSet<any>;
+
     const updatedNodes = data.nodes.map(node => {
       const isSelectedEvent = selectedEventId && node.id.toString() === selectedEventId;
-      const isEventNode = node.type === 'event';
       
-      // Use node color if available, otherwise fallback to level-based colors
-      const nodeBackgroundColor = isSelectedEvent ? '#FF6B35' : 
-                                 node.color ? node.color : getKeystoneNodeColor(node.level || 0);
-      
+      const getColorFromString = (colorStr?: string) => {
+        switch (colorStr) {
+          case 'red': return '#DC2626';
+          case 'yellow': return '#FBBF24';
+          case 'green': return '#059669';
+          default: return getKeystoneNodeColor(node.level || 0);
+        }
+      };
+
+      const backgroundColor = isSelectedEvent ? '#FF6B35' : getColorFromString(node.color);
+
       return {
         id: node.id,
         color: {
-          background: nodeBackgroundColor,
-          border: isSelectedEvent ? '#FF4500' : (isEventNode ? '#D4AF37' : getKeystoneBorderColor(node.level || 0)),
+          background: backgroundColor,
         },
         size: isSelectedEvent ? 40 : (25 + (3 - (node.level || 0)) * 8),
         borderWidth: isSelectedEvent ? 4 : 3,
-        shadow: {
-          enabled: true,
-          color: isSelectedEvent ? 'rgba(255, 107, 53, 0.5)' : 'rgba(212, 175, 55, 0.3)',
-          size: isSelectedEvent ? 12 : 8,
-          x: 3,
-          y: 3,
-        }
       };
     });
-
-    // Update the network
-    const nodesDataSet = networkRef.current.body.data.nodes as DataSet<any>;
+    
     nodesDataSet.update(updatedNodes);
 
-    // Focus on selected event node if one is selected
     if (selectedEventId) {
       networkRef.current.focus(selectedEventId, {
         scale: 1.2,

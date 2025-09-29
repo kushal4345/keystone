@@ -1,51 +1,76 @@
-import React, { useMemo, useCallback } from 'react';
+import React, { useMemo, useCallback, useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import type { GraphNode } from '@/types';
 
 interface TimelineViewProps {
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  onNodeHover?: (nodeId: string | null) => void;
 }
 
-export function TimelineView({ isCollapsed = false, onToggleCollapse }: TimelineViewProps) {
+export function TimelineView({ isCollapsed = false, onToggleCollapse, onNodeHover }: TimelineViewProps) {
   const { currentGraphData, selectedEventId, setSelectedEventId } = useApp();
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
 
-  const timelineEvents = useMemo(() => {
+  const timelineItems = useMemo(() => {
     if (!currentGraphData?.nodes) return [];
 
-    // Filter nodes that are events and have dates
-    const eventNodes = currentGraphData.nodes.filter(
-      (node): node is GraphNode & { properties: { date: string } } =>
-        node.type === 'event' && node.properties?.date
-    );
-
-    // Sort events by date
-    eventNodes.sort(
-      (a, b) =>
-        new Date(a.properties.date).getTime() -
-        new Date(b.properties.date).getTime()
-    );
-
-    return eventNodes.map((node, index) => ({
+    // Show all nodes, not just events
+    const allNodes = currentGraphData.nodes.map((node, index) => ({
       id: node.id.toString(),
       label: node.label,
-      date: new Date(node.properties.date),
-      details: node.properties.details || '',
-      location: node.properties.location || '',
-      dateString: new Date(node.properties.date).toLocaleDateString('en-US', {
+      type: node.type || 'node',
+      color: node.color || 'green',
+      level: node.level || 0,
+      hasDate: !!(node.properties?.date),
+      date: node.properties?.date ? new Date(node.properties.date) : null,
+      details: node.properties?.details || '',
+      location: node.properties?.location || '',
+      dateString: node.properties?.date ? new Date(node.properties.date).toLocaleDateString('en-US', {
         year: 'numeric',
         month: 'short',
         day: 'numeric'
-      })
+      }) : null,
+      sortOrder: node.properties?.date ? new Date(node.properties.date).getTime() : index * 1000
     }));
+
+    // Sort by date if available, otherwise by original order
+    allNodes.sort((a, b) => a.sortOrder - b.sortOrder);
+
+    return allNodes;
   }, [currentGraphData]);
 
-  const handleEventClick = useCallback((eventId: string) => {
-    // Toggle selection - if already selected, deselect
-    setSelectedEventId(eventId === selectedEventId ? null : eventId);
+  const getColorClasses = (color: string) => {
+    switch (color) {
+      case 'red': return 'bg-red-500 border-red-400';
+      case 'yellow': return 'bg-yellow-500 border-yellow-400';
+      case 'green': return 'bg-green-500 border-green-400';
+      default: return 'bg-gray-500 border-gray-400';
+    }
+  };
+
+  const getTypeIcon = (type: string) => {
+    switch (type) {
+      case 'event': return '⏰';
+      case 'entity': return '🏢';
+      case 'clause': return '📄';
+      case 'document': return '📋';
+      default: return '●';
+    }
+  };
+
+  const handleNodeClick = useCallback((nodeId: string) => {
+    setSelectedEventId(nodeId === selectedEventId ? null : nodeId);
   }, [selectedEventId, setSelectedEventId]);
 
-  if (timelineEvents.length === 0) {
+  const handleNodeHover = useCallback((nodeId: string | null) => {
+    setHoveredNodeId(nodeId);
+    if (onNodeHover) {
+      onNodeHover(nodeId);
+    }
+  }, [onNodeHover]);
+
+  if (timelineItems.length === 0) {
     return (
       <div className="bg-black h-full flex flex-col">
         <div className="px-3 py-2 flex items-center justify-between">
@@ -54,7 +79,7 @@ export function TimelineView({ isCollapsed = false, onToggleCollapse }: Timeline
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             <h3 className="text-sm font-medium text-white">Document Timeline</h3>
-            <span className="text-xs text-gray-400 ml-2">No events found</span>
+            <span className="text-xs text-gray-400 ml-2">No nodes found</span>
           </div>
           {onToggleCollapse && (
             <button
@@ -81,9 +106,9 @@ export function TimelineView({ isCollapsed = false, onToggleCollapse }: Timeline
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
-              <h4 className="text-xs font-medium text-gray-300 mb-1">No Timeline Events</h4>
+              <h4 className="text-xs font-medium text-gray-300 mb-1">No Timeline Items</h4>
               <p className="text-xs text-gray-500 leading-relaxed">
-                This document doesn't contain any dated events or deadlines.
+                This document doesn't contain any nodes to display.
               </p>
             </div>
           </div>
@@ -101,7 +126,7 @@ export function TimelineView({ isCollapsed = false, onToggleCollapse }: Timeline
           </svg>
           <h3 className="text-sm font-medium text-white mr-2 flex-shrink-0">Document Timeline</h3>
           <span className="text-xs text-gray-400 truncate">
-            {timelineEvents.length} event{timelineEvents.length !== 1 ? 's' : ''} • Click to highlight
+            {timelineItems.length} node{timelineItems.length !== 1 ? 's' : ''} • Hover to highlight
           </span>
         </div>
         {onToggleCollapse && (
@@ -122,55 +147,73 @@ export function TimelineView({ isCollapsed = false, onToggleCollapse }: Timeline
       </div>
       
       {!isCollapsed && (
-        <div className="flex-1 p-4 overflow-x-auto">
-          <div className="relative min-w-max">
-            {/* Timeline Line */}
-            <div className="absolute top-8 left-0 right-0 h-0.5 bg-gradient-to-r from-gray-700 via-yellow-400 to-gray-700"></div>
-            
-            {/* Timeline Events */}
-            <div className="flex items-start space-x-8 relative">
-              {timelineEvents.map((event, index) => (
-                <div key={event.id} className="flex flex-col items-center min-w-0">
-                  {/* Event Dot */}
-                  <button
-                    onClick={() => handleEventClick(event.id)}
-                    className={`relative z-10 w-4 h-4 rounded-full border-2 transition-all duration-200 ${
-                      selectedEventId === event.id
-                        ? 'bg-yellow-400 border-yellow-300 scale-125 shadow-lg shadow-yellow-400/50'
-                        : 'bg-gray-700 border-gray-500 hover:bg-yellow-500 hover:border-yellow-400 hover:scale-110'
-                    }`}
-                  >
-                    <div className={`absolute inset-1 rounded-full ${
-                      selectedEventId === event.id ? 'bg-yellow-300' : 'bg-transparent'
-                    }`}></div>
-                  </button>
+        <div className="flex-1 overflow-y-auto">
+          <div className="p-4 space-y-2">
+            {timelineItems.map((item) => (
+              <div
+                key={item.id}
+                className={`group relative p-3 rounded-lg border transition-all duration-200 cursor-pointer ${
+                  selectedEventId === item.id
+                    ? 'bg-yellow-500/20 border-yellow-400 shadow-lg shadow-yellow-400/20'
+                    : hoveredNodeId === item.id
+                    ? 'bg-gray-800 border-gray-600 shadow-md'
+                    : 'bg-gray-900/50 border-gray-700 hover:bg-gray-800 hover:border-gray-600'
+                }`}
+                onClick={() => handleNodeClick(item.id)}
+                onMouseEnter={() => handleNodeHover(item.id)}
+                onMouseLeave={() => handleNodeHover(null)}
+              >
+                <div className="flex items-start space-x-3">
+                  {/* Color indicator and type icon */}
+                  <div className="flex items-center space-x-2 flex-shrink-0">
+                    <div className={`w-3 h-3 rounded-full border ${getColorClasses(item.color)}`}></div>
+                    <span className="text-sm">{getTypeIcon(item.type)}</span>
+                  </div>
                   
-                  {/* Event Content */}
-                  <div className="mt-3 text-center max-w-32">
-                    <div className={`text-xs font-medium mb-1 transition-colors ${
-                      selectedEventId === event.id ? 'text-yellow-400' : 'text-white'
-                    }`}>
-                      {event.dateString}
+                  {/* Node content */}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <h4 className={`text-sm font-medium truncate ${
+                        selectedEventId === item.id ? 'text-yellow-300' : 'text-white'
+                      }`}>
+                        {item.label}
+                      </h4>
+                      <span className={`text-xs px-2 py-1 rounded-full ${
+                        item.type === 'event' ? 'bg-blue-500/20 text-blue-300' :
+                        item.type === 'entity' ? 'bg-purple-500/20 text-purple-300' :
+                        item.type === 'clause' ? 'bg-orange-500/20 text-orange-300' :
+                        'bg-gray-500/20 text-gray-300'
+                      }`}>
+                        {item.type}
+                      </span>
                     </div>
-                    <div className={`text-xs font-medium mb-1 transition-colors ${
-                      selectedEventId === event.id ? 'text-yellow-300' : 'text-gray-300'
-                    }`}>
-                      {event.label}
-                    </div>
-                    {event.details && (
-                      <div className="text-xs text-gray-400 line-clamp-2">
-                        {event.details}
+                    
+                    {item.dateString && (
+                      <div className="text-xs text-gray-400 mt-1">
+                        📅 {item.dateString}
                       </div>
                     )}
-                    {event.location && (
+                    
+                    {item.details && (
+                      <div className="text-xs text-gray-500 mt-1 line-clamp-2">
+                        {item.details}
+                      </div>
+                    )}
+                    
+                    {item.location && (
                       <div className="text-xs text-gray-500 mt-1">
-                        📍 {event.location}
+                        📍 {item.location}
                       </div>
                     )}
                   </div>
                 </div>
-              ))}
-            </div>
+                
+                {/* Hover indicator */}
+                <div className={`absolute inset-0 rounded-lg border-2 pointer-events-none transition-opacity duration-200 ${
+                  hoveredNodeId === item.id ? 'opacity-100 border-yellow-400' : 'opacity-0'
+                }`}></div>
+              </div>
+            ))}
           </div>
         </div>
       )}
