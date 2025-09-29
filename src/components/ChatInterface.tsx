@@ -115,7 +115,7 @@ export const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({
     <div 
       className="flex flex-col h-full"
       style={{
-        background: '#1a1a1a',
+        background: '#000000',
       }}
     >
       {/* Messages */}
@@ -126,10 +126,10 @@ export const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({
         
         {isThinking && (
           <div className="flex space-x-3 justify-start mb-4">
-            <div className="flex-shrink-0 w-8 h-8 bg-gray-600 rounded-full flex items-center justify-center">
+            <div className="flex-shrink-0 w-8 h-8 bg-gray-700 rounded-full flex items-center justify-center">
               <div className="w-2 h-2 bg-yellow-400 rounded-full animate-pulse" />
             </div>
-            <div className="bg-gray-800 px-4 py-3 rounded-lg max-w-xs">
+            <div className="bg-black border border-gray-700 px-4 py-3 rounded-lg max-w-xs">
               <div className="flex space-x-1">
                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
@@ -143,7 +143,7 @@ export const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({
       </div>
 
       {/* Input */}
-      <div className="p-4 border-t border-gray-700 bg-gray-900">
+      <div className="p-4 border-t border-gray-700 bg-black">
         <form onSubmit={handleSubmit} className="flex space-x-3">
           <div className="flex-1 relative">
             <textarea
@@ -152,7 +152,7 @@ export const ChatInterface = forwardRef<ChatInterfaceRef, ChatInterfaceProps>(({
               onChange={(e) => setInputValue(e.target.value)}
               onKeyDown={handleKeyDown}
               placeholder="Ask me anything about this document..."
-              className="w-full resize-none px-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-yellow-500 focus:outline-none transition-colors min-h-[48px] max-h-[120px]"
+              className="w-full resize-none px-4 py-3 bg-black border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:border-yellow-500 focus:outline-none transition-colors min-h-[48px] max-h-[120px]"
               disabled={isThinking}
               rows={1}
             />

@@ -103,6 +103,25 @@ class ApiService {
   }
 
   /**
+   * Get a contextual summary with traceability information
+   */
+  async getContextualSummary(clickedNodeId: string, graphData: GraphData, indexName: string): Promise<{ summary: string }> {
+    try {
+      if (this.isOnline && isOnline()) {
+        return this.getContextualSummaryOnline(clickedNodeId, graphData, indexName);
+      } else {
+        // For offline mode, fall back to simple topic-based summary
+        const clickedNode = graphData.nodes.find(n => n.id === clickedNodeId);
+        const topic = clickedNode ? clickedNode.label : 'Unknown topic';
+        return getSummaryOffline(topic);
+      }
+    } catch (error) {
+      console.error('Contextual summary generation error:', error);
+      throw new Error('Failed to generate contextual summary');
+    }
+  }
+
+  /**
    * Summarize the entire legal document
    */
   async summarizeLegalDocument(file: File): Promise<{ summary: string }> {
@@ -224,6 +243,35 @@ class ApiService {
       body: JSON.stringify({
         topic: topic,
         index_name: 'nerv', // Using the fixed index name from backend
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`HTTP error! status: ${response.status} - ${errorText}`);
+    }
+
+    return response.json();
+  }
+
+  private async getContextualSummaryOnline(clickedNodeId: string, graphData: GraphData, indexName: string): Promise<{ summary: string }> {
+    const response = await fetch(`${this.baseUrl}/api/get-summary`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        clicked_node_id: clickedNodeId,
+        nodes: graphData.nodes.map(node => ({
+          id: node.id,
+          label: node.label,
+          color: node.color || 'green' // Default to green if no color provided
+        })),
+        edges: graphData.edges.map(edge => ({
+          source: edge.source,
+          target: edge.target
+        })),
+        index_name: indexName
       }),
     });
 

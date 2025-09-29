@@ -99,7 +99,7 @@ export function HomePage() {
                   onClick={() => handleOnlineModeSelect(true)}
                   style={{
                     clipPath: 'polygon(8% 0%, 92% 0%, 100% 15%, 96% 100%, 4% 100%, 0% 15%)',
-                    background: '#2a2a2a',
+                    background: '#000000',
                   }}
                 >
                   <div className="p-6 text-center space-y-4">
@@ -132,7 +132,7 @@ export function HomePage() {
                   onClick={() => handleOnlineModeSelect(false)}
                   style={{
                     clipPath: 'polygon(4% 0%, 96% 0%, 100% 20%, 92% 100%, 8% 100%, 0% 20%)',
-                    background: '#2a2a2a',
+                    background: '#000000',
                   }}
                 >
                   <div className="p-6 text-center space-y-4">
@@ -183,7 +183,7 @@ export function HomePage() {
                   onClick={() => handleModeSelect('topic')}
                   style={{
                     clipPath: 'polygon(8% 0%, 92% 0%, 100% 15%, 96% 100%, 4% 100%, 0% 15%)',
-                    background: '#2a2a2a',
+                    background: '#000000',
                   }}
                 >
                   <div className="p-6 text-center space-y-4">
@@ -216,7 +216,7 @@ export function HomePage() {
                   onClick={() => handleModeSelect('summary')}
                   style={{
                     clipPath: 'polygon(4% 0%, 96% 0%, 100% 20%, 92% 100%, 8% 100%, 0% 20%)',
-                    background: '#2a2a2a',
+                    background: '#000000',
                   }}
                 >
                   <div className="p-6 text-center space-y-4">
@@ -266,6 +266,21 @@ export function HomePage() {
                     Mode: {isOnline ? 'Online' : 'Offline'}
                   </p>
                 </div>
+
+                {selectedMode === 'topic' && (
+                  <div className="text-center">
+                    <button
+                      onClick={() => navigate('/graph/demo')}
+                      className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-yellow-500 to-yellow-400 text-black font-semibold rounded-lg hover:from-yellow-400 hover:to-yellow-300 transition-all duration-200 shadow-lg hover:shadow-xl mb-4"
+                    >
+                      <Brain size={20} />
+                      <span>View Live Demo</span>
+                    </button>
+                    <p className="text-xs text-keystone-text-muted">
+                      See the interactive timeline and knowledge graph in action
+                    </p>
+                  </div>
+                )}
 
                 <FileUpload
                   onFileSelect={handleFileSelect}

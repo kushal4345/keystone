@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
-import type { GraphData } from '@/types';
+import type { GraphData, Annotations, SelectedTarget, Annotation } from '@/types';
+import { v4 as uuidv4 } from 'uuid';
 
 interface AppContextType {
   isOnline: boolean;
@@ -12,6 +13,19 @@ interface AppContextType {
   setCurrentGraphData: (data: GraphData | null) => void;
   modeSelected: boolean;
   setModeSelected: (selected: boolean) => void;
+  selectedEventId: string | null;
+  setSelectedEventId: (id: string | null) => void;
+  // Annotation system
+  annotations: Annotations;
+  setAnnotations: (annotations: Annotations) => void;
+  selectedTarget: SelectedTarget | null;
+  setSelectedTarget: (target: SelectedTarget | null) => void;
+  addAnnotation: (targetId: string, text: string, author: string) => void;
+  editAnnotation: (targetId: string, annotationId: string, newText: string) => void;
+  deleteAnnotation: (targetId: string, annotationId: string) => void;
+  // Document summary for export
+  documentSummary: string | null;
+  setDocumentSummary: (summary: string | null) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -30,6 +44,12 @@ export function AppProvider({ children }: AppProviderProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [currentGraphData, setCurrentGraphData] = useState<GraphData | null>(null);
   const [modeSelected, setModeSelected] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  
+  // Annotation system state
+  const [annotations, setAnnotations] = useState<Annotations>({});
+  const [selectedTarget, setSelectedTarget] = useState<SelectedTarget | null>(null);
+  const [documentSummary, setDocumentSummary] = useState<string | null>(null);
 
   // Auto-detect online/offline status
   React.useEffect(() => {
@@ -48,6 +68,39 @@ export function AppProvider({ children }: AppProviderProps) {
     };
   }, []);
 
+  // Annotation management functions
+  const addAnnotation = (targetId: string, text: string, author: string) => {
+    const newAnnotation: Annotation = {
+      id: uuidv4(),
+      text,
+      author,
+      createdAt: new Date(),
+    };
+
+    setAnnotations(prev => ({
+      ...prev,
+      [targetId]: [...(prev[targetId] || []), newAnnotation]
+    }));
+  };
+
+  const editAnnotation = (targetId: string, annotationId: string, newText: string) => {
+    setAnnotations(prev => ({
+      ...prev,
+      [targetId]: prev[targetId]?.map(annotation =>
+        annotation.id === annotationId
+          ? { ...annotation, text: newText, editedAt: new Date() }
+          : annotation
+      ) || []
+    }));
+  };
+
+  const deleteAnnotation = (targetId: string, annotationId: string) => {
+    setAnnotations(prev => ({
+      ...prev,
+      [targetId]: prev[targetId]?.filter(annotation => annotation.id !== annotationId) || []
+    }));
+  };
+
   const value = {
     isOnline,
     setIsOnline,
@@ -59,6 +112,19 @@ export function AppProvider({ children }: AppProviderProps) {
     setCurrentGraphData,
     modeSelected,
     setModeSelected,
+    selectedEventId,
+    setSelectedEventId,
+    // Annotation system
+    annotations,
+    setAnnotations,
+    selectedTarget,
+    setSelectedTarget,
+    addAnnotation,
+    editAnnotation,
+    deleteAnnotation,
+    // Document summary
+    documentSummary,
+    setDocumentSummary,
   };
 
   return (

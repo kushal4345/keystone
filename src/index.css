@@ -4,6 +4,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Custom utility for text truncation */
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 @layer base {
   * {
     box-sizing: border-box;
@@ -19,7 +27,7 @@
     line-height: 1.6;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
-    background-color: #1a1a1a;
+    background-color: #000000;
     color: #F5F5F5;
     overflow-x: hidden;
   }
@@ -51,7 +59,7 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: #2a2a2a;
+  background: #000000;
   border-radius: 4px;
 }
 
@@ -67,5 +75,5 @@
 /* Keystone theme text selection */
 ::selection {
   background-color: #D4AF37;
-  color: #1a1a1a;
+  color: #000000;
 }
