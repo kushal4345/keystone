@@ -9,6 +9,7 @@ export interface GraphNode {
   x?: number;
   y?: number;
   type?: string;
+  color?: 'red' | 'yellow' | 'green';
   properties?: {
     date?: string;
     details?: string;
@@ -55,4 +56,22 @@ export interface ProcessDocumentResponse {
 export interface AskQuestionResponse {
   answer: string;
   sources?: string[];
+}
+
+export interface Annotation {
+  id: string;
+  text: string;
+  author: string;
+  createdAt: Date;
+  editedAt?: Date;
+}
+
+export type Annotations = {
+  [targetId: string]: Annotation[];
+};
+
+export interface SelectedTarget {
+  id: string;
+  type: 'node' | 'edge';
+  label?: string;
 }

@@ -12,19 +12,22 @@ export function generateSampleLegalData(): GraphData {
         id: 'contract-001',
         label: 'Service Agreement',
         level: 0,
-        type: 'document'
+        type: 'document',
+        color: 'green'
       },
       {
         id: 'party-a',
         label: 'TechCorp Inc.',
         level: 1,
-        type: 'entity'
+        type: 'entity',
+        color: 'green'
       },
       {
         id: 'party-b',
         label: 'Legal Services LLC',
         level: 1,
-        type: 'entity'
+        type: 'entity',
+        color: 'green'
       },
       
       // Event nodes with dates - these will appear on the timeline
@@ -33,6 +36,7 @@ export function generateSampleLegalData(): GraphData {
         label: 'Contract Signing',
         level: 2,
         type: 'event',
+        color: 'green',
         properties: {
           date: '2024-01-15T09:00:00.000Z',
           details: 'Initial signing of the service agreement',
@@ -44,6 +48,7 @@ export function generateSampleLegalData(): GraphData {
         label: 'Effective Date',
         level: 2,
         type: 'event',
+        color: 'green',
         properties: {
           date: '2024-02-01T00:00:00.000Z',
           details: 'Contract becomes legally binding',
@@ -55,6 +60,7 @@ export function generateSampleLegalData(): GraphData {
         label: 'First Milestone Due',
         level: 2,
         type: 'event',
+        color: 'yellow',
         properties: {
           date: '2024-03-15T17:00:00.000Z',
           details: 'Delivery of initial legal consultation report',
@@ -66,6 +72,7 @@ export function generateSampleLegalData(): GraphData {
         label: 'First Payment Due',
         level: 2,
         type: 'event',
+        color: 'red',
         properties: {
           date: '2024-03-30T23:59:00.000Z',
           details: 'Payment of $50,000 for initial services',
@@ -77,6 +84,7 @@ export function generateSampleLegalData(): GraphData {
         label: 'Quarterly Review',
         level: 2,
         type: 'event',
+        color: 'yellow',
         properties: {
           date: '2024-05-01T14:00:00.000Z',
           details: 'Quarterly performance and contract review meeting',
@@ -88,6 +96,7 @@ export function generateSampleLegalData(): GraphData {
         label: 'Contract Renewal Deadline',
         level: 2,
         type: 'event',
+        color: 'red',
         properties: {
           date: '2024-12-31T23:59:00.000Z',
           details: 'Deadline for contract renewal decision',
@@ -100,19 +109,22 @@ export function generateSampleLegalData(): GraphData {
         id: 'term-payment',
         label: 'Payment Terms',
         level: 3,
-        type: 'clause'
+        type: 'clause',
+        color: 'yellow'
       },
       {
         id: 'term-confidentiality',
         label: 'Confidentiality Clause',
         level: 3,
-        type: 'clause'
+        type: 'clause',
+        color: 'yellow'
       },
       {
         id: 'liability-limit',
         label: 'Liability Limitation',
         level: 3,
-        type: 'clause'
+        type: 'clause',
+        color: 'red'
       }
     ],
     edges: [

@@ -17,7 +17,7 @@ interface KnowledgeGraphProps {
 export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const networkRef = useRef<Network | null>(null);
-  const { selectedEventId, setSelectedEventId } = useApp();
+  const { selectedEventId, setSelectedEventId, annotations, selectedTarget, setSelectedTarget } = useApp();
   const [contextMenu, setContextMenu] = useState<{
     visible: boolean;
     x: number;
@@ -51,6 +51,17 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
       data.nodes.map(node => {
         const isSelectedEvent = selectedEventId && node.id.toString() === selectedEventId;
         const isEventNode = node.type === 'event';
+        const hasAnnotations = annotations[node.id.toString()]?.length > 0;
+        const isSelectedTarget = selectedTarget?.id === node.id.toString() && selectedTarget?.type === 'node';
+        
+        // Determine node colors based on API color property or fallback to level-based colors
+        const nodeBackgroundColor = isSelectedEvent ? '#FF6B35' : 
+                                   isSelectedTarget ? '#8B5CF6' :
+                                   node.color ? node.color : getKeystoneNodeColor(node.level || 0);
+        
+        // Determine font color based on background color for better readability
+        const fontColor = node.color && (node.color === 'red' || node.color === 'green') ? '#FFFFFF' : 
+                         node.color === 'yellow' ? '#000000' : '#FFFFFF';
         
         return {
           id: node.id,
@@ -58,20 +69,23 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
           level: node.level,
           type: node.type,
           color: {
-            background: isSelectedEvent ? '#FF6B35' : getKeystoneNodeColor(node.level || 0),
-            border: isSelectedEvent ? '#FF4500' : (isEventNode ? '#D4AF37' : getKeystoneBorderColor(node.level || 0)),
+            background: nodeBackgroundColor,
+            border: isSelectedEvent ? '#FF4500' : 
+                   isSelectedTarget ? '#7C3AED' :
+                   hasAnnotations ? '#10B981' :
+                   (isEventNode ? '#D4AF37' : getKeystoneBorderColor(node.level || 0)),
             highlight: {
               background: '#FFD700', // Keystone gold highlight
               border: '#D4AF37',
             },
             hover: {
-              background: getKeystoneHoverColor(node.level || 0),
+              background: node.color ? node.color : getKeystoneHoverColor(node.level || 0),
               border: '#D4AF37',
             }
           },
           font: {
             size: 14,
-            color: '#FFFFFF',
+            color: fontColor,
             face: 'Inter, sans-serif',
             bold: '600',
           },
@@ -91,38 +105,46 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
     );
 
         const edges = new DataSet(
-      data.edges.map((edge, index) => ({
-        id: index,
-        from: edge.from ?? edge.source,
-        to: edge.to ?? edge.target,
-        color: { 
-          color: '#666666', 
-          highlight: '#D4AF37',
-          hover: '#FFD700',
-          opacity: 0.8
-        },
-        width: 3,
-        smooth: { 
-          enabled: true,
-          type: 'dynamic',
-          roundness: 0.3,
-          forceDirection: 'none'
-        },
-        arrows: {
-          to: { 
-            enabled: true, 
-            scaleFactor: 1.2,
-            type: 'arrow'
+      data.edges.map((edge, index) => {
+        const edgeId = `edge-${edge.source}-${edge.target}`;
+        const hasAnnotations = annotations[edgeId]?.length > 0;
+        const isSelectedTarget = selectedTarget?.id === edgeId && selectedTarget?.type === 'edge';
+        
+        return {
+          id: index,
+          from: edge.from ?? edge.source,
+          to: edge.to ?? edge.target,
+          edgeId: edgeId, // Store for click handling
+          color: { 
+            color: isSelectedTarget ? '#8B5CF6' : 
+                   hasAnnotations ? '#10B981' : '#666666',
+            highlight: '#D4AF37',
+            hover: '#FFD700',
+            opacity: 0.8
           },
-        },
-        shadow: {
-          enabled: true,
-          color: 'rgba(0,0,0,0.1)',
-          size: 3,
-          x: 1,
-          y: 1,
-        }
-      }))
+          width: 3,
+          smooth: { 
+            enabled: true,
+            type: 'dynamic',
+            roundness: 0.3,
+            forceDirection: 'none'
+          },
+          arrows: {
+            to: { 
+              enabled: true, 
+              scaleFactor: 1.2,
+              type: 'arrow'
+            },
+          },
+          shadow: {
+            enabled: true,
+            color: 'rgba(0,0,0,0.1)',
+            size: 3,
+            x: 1,
+            y: 1,
+          }
+        };
+      })
     );
 
     const options = {
@@ -160,7 +182,7 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
       interaction: {
         hover: true,
         hoverConnectedEdges: true,
-        selectConnectedEdges: false,
+        selectConnectedEdges: true,
         dragNodes: true,
         dragView: true,
         zoomView: true,
@@ -256,7 +278,7 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
       }
     });
 
-    // Handle clicks for RAG requests and event selection
+    // Handle clicks for RAG requests, event selection, and annotations
     network.on('click', (event) => {
       setContextMenu(prev => ({ ...prev, visible: false }));
 
@@ -264,6 +286,13 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
         const nodeId = event.nodes[0];
         const node = data.nodes.find(n => n.id === nodeId);
         if (node) {
+          // Set selected target for annotations
+          setSelectedTarget({
+            id: nodeId.toString(),
+            type: 'node',
+            label: node.label
+          });
+
           // If it's an event node, update the selected event
           if (node.type === 'event') {
             setSelectedEventId(nodeId.toString() === selectedEventId ? null : nodeId.toString());
@@ -272,9 +301,21 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
           // Also trigger the regular node click behavior
           handleNodeClick(nodeId, node.label);
         }
+      } else if (event.edges.length > 0) {
+        const edgeIndex = event.edges[0];
+        const edgeData = edges.get(edgeIndex);
+        if (edgeData) {
+          // Set selected target for edge annotations
+          setSelectedTarget({
+            id: edgeData.edgeId,
+            type: 'edge',
+            label: `Edge: ${edgeData.from} → ${edgeData.to}`
+          });
+        }
       } else {
-        // Clicked on empty space, deselect event
+        // Clicked on empty space, deselect everything
         setSelectedEventId(null);
+        setSelectedTarget(null);
       }
     });
 
@@ -310,7 +351,7 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
         clearTimeout(hoverTimeout);
       }
     };
-  }, [data, onNodeSelect, selectedEventId]);
+  }, [data, onNodeSelect, selectedEventId, annotations, selectedTarget]);
 
   // Effect to handle selectedEventId changes from timeline
   useEffect(() => {
@@ -321,10 +362,14 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
       const isSelectedEvent = selectedEventId && node.id.toString() === selectedEventId;
       const isEventNode = node.type === 'event';
       
+      // Use node color if available, otherwise fallback to level-based colors
+      const nodeBackgroundColor = isSelectedEvent ? '#FF6B35' : 
+                                 node.color ? node.color : getKeystoneNodeColor(node.level || 0);
+      
       return {
         id: node.id,
         color: {
-          background: isSelectedEvent ? '#FF6B35' : getKeystoneNodeColor(node.level || 0),
+          background: nodeBackgroundColor,
           border: isSelectedEvent ? '#FF4500' : (isEventNode ? '#D4AF37' : getKeystoneBorderColor(node.level || 0)),
         },
         size: isSelectedEvent ? 40 : (25 + (3 - (node.level || 0)) * 8),
