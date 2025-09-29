@@ -3,14 +3,9 @@ import { ChatOllama } from "@langchain/community/chat_models/ollama";
 import { OllamaEmbeddings } from "@langchain/community/embeddings/ollama";
 import { MemoryVectorStore } from "langchain/vectorstores/memory";
 import { RecursiveCharacterTextSplitter } from "langchain/text_splitter";
-import { Document } from "langchain/document";
-import { ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate } from "@langchain/core/prompts";
+import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { StringOutputParser } from "@langchain/core/output_parsers";
-import {
-    RunnableSequence,
-    RunnablePassthrough,
-} from "@langchain/core/runnables";
-import * as pdfjsLib from "pdfjs-dist/build/pdf";
+import * as pdfjsLib from "pdfjs-dist";
 
 // Set PDF.js worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.mjs`;
@@ -21,14 +16,111 @@ const llm = new ChatOllama({ model: "phi4-mini" });
 const embeddings = new OllamaEmbeddings({ model: "nomic-embed-text" });
 
 let vectorStore: MemoryVectorStore | null = null;
-const chatHistory = new Map<string, any[]>();
+const chatHistory = new Map<string, { human: string; ai: string }[]>();
 
 // --- Helper Functions (Offline) ---
 
 /**
- * Extracts text from a PDF file.
- * @param {File} file - The PDF file to process.
- * @returns {Promise<string>} - The extracted text content.
+ * Generates graph data from extracted text by identifying legal document sections
+ * @param {string} text - The extracted text content
+ * @returns {Promise<object>} - Graph data with nodes and edges
+ */
+async function generateGraphDataFromText(text: string): Promise<any> {
+    try {
+        // Define common legal document sections
+        const legalSections = [
+            'SERVICE AGREEMENT',
+            'RECITALS',
+            'DEFINITIONS',
+            'SCOPE OF SERVICES',
+            'COMPENSATION',
+            'REPRESENTATIONS AND WARRANTIES',
+            'TERMINATION',
+            'INDEMNIFICATION',
+            'FORCE MAJEURE',
+            'GOVERNING LAW',
+            'DISPUTE RESOLUTION',
+            'CONFIDENTIALITY',
+            'INTELLECTUAL PROPERTY',
+            'LIABILITY',
+            'SURVIVAL',
+            'ENSURE PERFORMANCE',
+            'BREACH',
+            'REMEDIES'
+        ];
+
+        const nodes: any[] = [];
+        const edges: any[] = [];
+        let nodeId = 1;
+
+        // Search for sections in the text and create nodes
+        for (const section of legalSections) {
+            const sectionRegex = new RegExp(`\\b${section.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'gi');
+            if (sectionRegex.test(text)) {
+                // Determine color based on section type
+                let color = "#FFD700"; // Default gold
+                if (section.includes('AGREEMENT') || section.includes('SERVICE')) {
+                    color = "#FF6347"; // Tomato red
+                } else if (section.includes('COMPENSATION') || section.includes('PAYMENT')) {
+                    color = "#32CD32"; // Lime green
+                } else if (section.includes('REPRESENTATIONS') || section.includes('WARRANTIES')) {
+                    color = "#1E90FF"; // Dodger blue
+                } else if (section.includes('TERMINATION') || section.includes('BREACH')) {
+                    color = "#FF4500"; // Orange red
+                } else if (section.includes('DEFINITIONS') || section.includes('RECITALS')) {
+                    color = "#9370DB"; // Medium purple
+                }
+
+                nodes.push({
+                    id: nodeId,
+                    label: section,
+                    color: color,
+                    title: `Legal Section: ${section}`
+                });
+
+                // Create connections to previous nodes (simple sequential connection)
+                if (nodeId > 1) {
+                    edges.push({
+                        from: nodeId - 1,
+                        to: nodeId,
+                        color: { color: "#888888", width: 2 }
+                    });
+                }
+
+                nodeId++;
+            }
+        }
+
+        // If no sections found, create a default node
+        if (nodes.length === 0) {
+            nodes.push({
+                id: 1,
+                label: "Legal Document",
+                color: "#FFD700",
+                title: "Legal Document Content"
+            });
+        }
+
+        return {
+            nodes,
+            edges
+        };
+    } catch (error) {
+        console.error('Error generating graph data:', error);
+        // Return default graph structure if generation fails
+        return {
+            nodes: [
+                { id: 1, label: "Legal Document", color: "#FFD700" }
+            ],
+            edges: []
+        };
+    }
+}
+
+/**
+ * Extляет текст из PDF файла
+ * @param {File} file - PDF файл для обработки
+ * @returns {Promise<string>} - Извлеченный текстовый контент
  */
 async function extractTextFromPdf(file: File): Promise<string> {
     const arrayBuffer = await file.arrayBuffer();
@@ -61,18 +153,8 @@ export async function processPdfOffline(file: File): Promise<{ message: string; 
 
         vectorStore = await MemoryVectorStore.fromDocuments(chunks, embeddings);
 
-        // Generate a simple graph data structure for offline mode
-        const graphData = {
-            nodes: [
-                { id: 1, label: "Document", color: "#FFD700" },
-                { id: 2, label: "Summary", color: "#FFA500" },
-                { id: 3, label: "Analysis", color: "#FF6347" }
-            ],
-            edges: [
-                { from: 1, to: 2 },
-                { from: 1, to: 3 }
-            ]
-        };
+        // Generate graph data structure based on document content
+        const graphData = await generateGraphDataFromText(fullText);
 
         return {
             message: "Document processed successfully for offline use.",
@@ -147,40 +229,41 @@ export async function chatWithTopicOffline(chatId: string, userMessage: string):
         if (!chatHistory.has(chatId)) {
             chatHistory.set(chatId, []);
         }
-        const history = chatHistory.get(chatId);
+        const history = chatHistory.get(chatId) || [];
 
-        const systemPrompt = `You are an expert AI tutor for the topic of "{chat_id}".
-Your goal is to provide the best possible answer. Base your answer on the user's conversation history and the relevant context from the document provided below. Prioritize the document's information.
+        // Build conversation history from simple object structure
+        let conversationHistory = "";
+        for (const entry of history) {
+            conversationHistory += `Human: ${entry.human}\n\n`;
+            conversationHistory += `Assistant: ${entry.ai}\n\n`;
+        }
 
-CONTEXT FROM DOCUMENT:
+        const systemPrompt = `You are an expert AI tutor for legal document analysis.
+Your goal is to provide accurate and helpful answers based on the document content provided below. 
+Please prioritize the information from the document and provide clear, well-structured responses.
+
+DOCUMENT CONTEXT:
 ---
-{context}
+${contextText}
 ---`;
 
-        const prompt = ChatPromptTemplate.fromMessages([
-            SystemMessagePromptTemplate.fromTemplate(systemPrompt),
-            ...history,
-            HumanMessagePromptTemplate.fromTemplate("{input}"),
-        ]);
+        let fullPrompt = systemPrompt;
+        if (conversationHistory) {
+            fullPrompt += `\n\nPREVIOUS CONVERSATION:\n${conversationHistory}`;
+        }
+        fullPrompt += `\n\nCurrent Question: ${userMessage}`;
 
-        const chain = RunnableSequence.from([
-            {
-                context: retriever.pipe((docs) =>
-                    docs.map((doc) => doc.pageContent).join("\n\n")
-                ),
-                input: new RunnablePassthrough(),
-                chat_id: () => chatId,
-            },
-            prompt,
-            llm,
-            new StringOutputParser(),
-        ]);
+        const response = await llm.invoke(fullPrompt);
+        const aiResponse = response.content as string;
 
-        const aiResponse = await chain.invoke(userMessage);
-
-        // Update chat history
-        history.push(new HumanMessagePromptTemplate.fromTemplate(userMessage));
-        history.push(new SystemMessagePromptTemplate.fromTemplate(aiResponse));
+        // Update chat history with simple object structure
+        history.push({ human: userMessage, ai: aiResponse });
+        
+        // Keep only last 10 exchanges to prevent context overflow
+        if (history.length > 10) {
+            history.splice(0, history.length - 10);
+        }
+        
         chatHistory.set(chatId, history);
 
         return { ai_response: aiResponse };
