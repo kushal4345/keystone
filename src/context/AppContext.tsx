@@ -12,6 +12,8 @@ interface AppContextType {
   setCurrentGraphData: (data: GraphData | null) => void;
   modeSelected: boolean;
   setModeSelected: (selected: boolean) => void;
+  selectedEventId: string | null;
+  setSelectedEventId: (id: string | null) => void;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -30,6 +32,7 @@ export function AppProvider({ children }: AppProviderProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [currentGraphData, setCurrentGraphData] = useState<GraphData | null>(null);
   const [modeSelected, setModeSelected] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
   // Auto-detect online/offline status
   React.useEffect(() => {
@@ -59,6 +62,8 @@ export function AppProvider({ children }: AppProviderProps) {
     setCurrentGraphData,
     modeSelected,
     setModeSelected,
+    selectedEventId,
+    setSelectedEventId,
   };
 
   return (

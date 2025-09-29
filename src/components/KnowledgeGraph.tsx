@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, useCallback } from 'react';
 import { Network } from 'vis-network';
 import { DataSet } from 'vis-data';
 import { NodeContextMenu } from './NodeContextMenu';
+import { useApp } from '@/context/AppContext';
 import type { GraphData } from '@/types';
 
 interface KnowledgeGraphProps {
@@ -16,6 +17,7 @@ interface KnowledgeGraphProps {
 export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeGraphProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const networkRef = useRef<Network | null>(null);
+  const { selectedEventId, setSelectedEventId } = useApp();
   const [contextMenu, setContextMenu] = useState<{
     visible: boolean;
     x: number;
@@ -46,40 +48,46 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
     if (!containerRef.current) return;
 
     const nodes = new DataSet(
-      data.nodes.map(node => ({
-        id: node.id,
-        label: node.label,
-        level: node.level,
-        color: {
-          background: getKeystoneNodeColor(node.level || 0),
-          border: getKeystoneBorderColor(node.level || 0),
-          highlight: {
-            background: '#FFD700', // Keystone gold highlight
-            border: '#D4AF37',
+      data.nodes.map(node => {
+        const isSelectedEvent = selectedEventId && node.id.toString() === selectedEventId;
+        const isEventNode = node.type === 'event';
+        
+        return {
+          id: node.id,
+          label: node.label,
+          level: node.level,
+          type: node.type,
+          color: {
+            background: isSelectedEvent ? '#FF6B35' : getKeystoneNodeColor(node.level || 0),
+            border: isSelectedEvent ? '#FF4500' : (isEventNode ? '#D4AF37' : getKeystoneBorderColor(node.level || 0)),
+            highlight: {
+              background: '#FFD700', // Keystone gold highlight
+              border: '#D4AF37',
+            },
+            hover: {
+              background: getKeystoneHoverColor(node.level || 0),
+              border: '#D4AF37',
+            }
           },
-          hover: {
-            background: getKeystoneHoverColor(node.level || 0),
-            border: '#D4AF37',
-          }
-        },
-        font: {
-          size: 14,
-          color: '#FFFFFF',
-          face: 'Inter, sans-serif',
-          bold: '600',
-        },
-        shape: 'hexagon',
-        size: 25 + (3 - (node.level || 0)) * 8,
-        borderWidth: 3,
-        shadow: {
-          enabled: true,
-          color: 'rgba(212, 175, 55, 0.3)', // Keystone gold shadow
-          size: 8,
-          x: 3,
-          y: 3,
-        },
-        chosen: true
-      }))
+          font: {
+            size: 14,
+            color: '#FFFFFF',
+            face: 'Inter, sans-serif',
+            bold: '600',
+          },
+          shape: isEventNode ? 'diamond' : 'hexagon',
+          size: isSelectedEvent ? 40 : (25 + (3 - (node.level || 0)) * 8),
+          borderWidth: isSelectedEvent ? 4 : 3,
+          shadow: {
+            enabled: true,
+            color: isSelectedEvent ? 'rgba(255, 107, 53, 0.5)' : 'rgba(212, 175, 55, 0.3)',
+            size: isSelectedEvent ? 12 : 8,
+            x: 3,
+            y: 3,
+          },
+          chosen: true
+        };
+      })
     );
 
         const edges = new DataSet(
@@ -248,7 +256,7 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
       }
     });
 
-    // Handle clicks for RAG requests
+    // Handle clicks for RAG requests and event selection
     network.on('click', (event) => {
       setContextMenu(prev => ({ ...prev, visible: false }));
 
@@ -256,8 +264,17 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
         const nodeId = event.nodes[0];
         const node = data.nodes.find(n => n.id === nodeId);
         if (node) {
+          // If it's an event node, update the selected event
+          if (node.type === 'event') {
+            setSelectedEventId(nodeId.toString() === selectedEventId ? null : nodeId.toString());
+          }
+          
+          // Also trigger the regular node click behavior
           handleNodeClick(nodeId, node.label);
         }
+      } else {
+        // Clicked on empty space, deselect event
+        setSelectedEventId(null);
       }
     });
 
@@ -293,7 +310,50 @@ export function KnowledgeGraph({ data, onNodeSelect, onNodeExplain }: KnowledgeG
         clearTimeout(hoverTimeout);
       }
     };
-  }, [data, onNodeSelect]);
+  }, [data, onNodeSelect, selectedEventId]);
+
+  // Effect to handle selectedEventId changes from timeline
+  useEffect(() => {
+    if (!networkRef.current || !data.nodes) return;
+
+    // Update node appearance based on selection
+    const updatedNodes = data.nodes.map(node => {
+      const isSelectedEvent = selectedEventId && node.id.toString() === selectedEventId;
+      const isEventNode = node.type === 'event';
+      
+      return {
+        id: node.id,
+        color: {
+          background: isSelectedEvent ? '#FF6B35' : getKeystoneNodeColor(node.level || 0),
+          border: isSelectedEvent ? '#FF4500' : (isEventNode ? '#D4AF37' : getKeystoneBorderColor(node.level || 0)),
+        },
+        size: isSelectedEvent ? 40 : (25 + (3 - (node.level || 0)) * 8),
+        borderWidth: isSelectedEvent ? 4 : 3,
+        shadow: {
+          enabled: true,
+          color: isSelectedEvent ? 'rgba(255, 107, 53, 0.5)' : 'rgba(212, 175, 55, 0.3)',
+          size: isSelectedEvent ? 12 : 8,
+          x: 3,
+          y: 3,
+        }
+      };
+    });
+
+    // Update the network
+    const nodesDataSet = networkRef.current.body.data.nodes as DataSet<any>;
+    nodesDataSet.update(updatedNodes);
+
+    // Focus on selected event node if one is selected
+    if (selectedEventId) {
+      networkRef.current.focus(selectedEventId, {
+        scale: 1.2,
+        animation: {
+          duration: 800,
+          easingFunction: 'easeInOutQuad'
+        }
+      });
+    }
+  }, [selectedEventId, data.nodes]);
 
   const handleGenerateQuiz = () => {
     if (contextMenu.nodeId && onNodeSelect) {

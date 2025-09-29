@@ -267,6 +267,21 @@ export function HomePage() {
                   </p>
                 </div>
 
+                {selectedMode === 'topic' && (
+                  <div className="text-center">
+                    <button
+                      onClick={() => navigate('/graph/demo')}
+                      className="inline-flex items-center space-x-2 px-6 py-3 bg-gradient-to-r from-yellow-500 to-yellow-400 text-black font-semibold rounded-lg hover:from-yellow-400 hover:to-yellow-300 transition-all duration-200 shadow-lg hover:shadow-xl mb-4"
+                    >
+                      <Brain size={20} />
+                      <span>View Live Demo</span>
+                    </button>
+                    <p className="text-xs text-keystone-text-muted">
+                      See the interactive timeline and knowledge graph in action
+                    </p>
+                  </div>
+                )}
+
                 <FileUpload
                   onFileSelect={handleFileSelect}
                   isLoading={isLoading}

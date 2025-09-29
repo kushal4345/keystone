@@ -8,6 +8,13 @@ export interface GraphNode {
   level?: number;
   x?: number;
   y?: number;
+  type?: string;
+  properties?: {
+    date?: string;
+    details?: string;
+    location?: string;
+    [key: string]: any;
+  };
 }
 
 export interface GraphEdge {

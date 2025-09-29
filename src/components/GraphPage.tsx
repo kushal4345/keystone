@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { KnowledgeGraph } from './KnowledgeGraph';
+import { TimelineView } from './TimelineView';
 import { ChatInterface, type ChatInterfaceRef } from './ChatInterface';
 import { useApp } from '@/context/AppContext';
 import { apiService } from '@/services/apiService';
+import { generateSampleLegalData } from '@/utils/sampleEventData';
 import { ArrowLeft } from 'lucide-react';
 
 /**
@@ -11,17 +13,29 @@ import { ArrowLeft } from 'lucide-react';
  */
 export function GraphPage() {
   const { documentId } = useParams<{ documentId: string }>();
-  const { isOnline, setCurrentDocumentId, currentGraphData } = useApp();
+  const { isOnline, setCurrentDocumentId, currentGraphData, setCurrentGraphData } = useApp();
   const navigate = useNavigate();
   const chatRef = useRef<ChatInterfaceRef>(null);
   const [chatWidth, setChatWidth] = useState(384); // 384px = w-96
+  const [timelineHeight, setTimelineHeight] = useState(180); // Default timeline height
+  const [isTimelineCollapsed, setIsTimelineCollapsed] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
+  const [isTimelineDragging, setIsTimelineDragging] = useState(false);
 
   useEffect(() => {
     if (documentId) {
       setCurrentDocumentId(documentId);
     }
   }, [documentId, setCurrentDocumentId]);
+
+  // Load demo data by default for hackathon demonstration
+  useEffect(() => {
+    if (!currentGraphData) {
+      const sampleData = generateSampleLegalData();
+      setCurrentGraphData(sampleData);
+      setCurrentDocumentId('sample-legal-contract');
+    }
+  }, [currentGraphData, setCurrentGraphData, setCurrentDocumentId]);
 
   useEffect(() => {
     // Update API service mode when online status changes
@@ -51,25 +65,41 @@ export function GraphPage() {
     setIsDragging(true);
   }, []);
 
+  const handleTimelineMouseDown = useCallback(() => {
+    setIsTimelineDragging(true);
+  }, []);
+
   const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging) return;
+    if (isDragging) {
+      const newWidth = window.innerWidth - e.clientX;
+      const minWidth = 280;
+      const maxWidth = window.innerWidth * 0.6;
+      setChatWidth(Math.max(minWidth, Math.min(maxWidth, newWidth)));
+    }
     
-    const newWidth = window.innerWidth - e.clientX;
-    const minWidth = 280;
-    const maxWidth = window.innerWidth * 0.6;
-    
-    setChatWidth(Math.max(minWidth, Math.min(maxWidth, newWidth)));
-  }, [isDragging]);
+    if (isTimelineDragging) {
+      const containerRect = document.querySelector('.main-container')?.getBoundingClientRect();
+      if (containerRect) {
+        const relativeY = e.clientY - containerRect.top;
+        const availableHeight = containerRect.height;
+        const newHeight = availableHeight - relativeY;
+        const minHeight = 120;
+        const maxHeight = availableHeight * 0.5;
+        setTimelineHeight(Math.max(minHeight, Math.min(maxHeight, newHeight)));
+      }
+    }
+  }, [isDragging, isTimelineDragging]);
 
   const handleMouseUp = useCallback(() => {
     setIsDragging(false);
+    setIsTimelineDragging(false);
   }, []);
 
   useEffect(() => {
-    if (isDragging) {
+    if (isDragging || isTimelineDragging) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
-      document.body.style.cursor = 'col-resize';
+      document.body.style.cursor = isDragging ? 'col-resize' : 'row-resize';
       document.body.style.userSelect = 'none';
       
       return () => {
@@ -79,7 +109,7 @@ export function GraphPage() {
         document.body.style.userSelect = '';
       };
     }
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+  }, [isDragging, isTimelineDragging, handleMouseMove, handleMouseUp]);
 
   if (!documentId) {
     return (
@@ -92,14 +122,14 @@ export function GraphPage() {
     );
   }
 
-  // Remove loading and error states since we get data from context
-
+  // Demo data loads automatically, but show loading state briefly if needed
   if (!currentGraphData) {
     return (
-      <div className="min-h-screen bg-gray-50 pt-20 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-900 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">No Data Available</h2>
-          <p className="text-gray-600">Unable to generate knowledge graph for this document.</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-yellow-400 mx-auto mb-4"></div>
+          <h2 className="text-xl font-medium text-white mb-2">Loading Demo</h2>
+          <p className="text-gray-400">Preparing legal document analysis...</p>
         </div>
       </div>
     );
@@ -109,6 +139,10 @@ export function GraphPage() {
     navigate('/');
   };
 
+  const toggleTimelineCollapse = () => {
+    setIsTimelineCollapsed(!isTimelineCollapsed);
+  };
+
   return (
     <div 
       className="min-h-screen"
@@ -116,33 +150,44 @@ export function GraphPage() {
         background: '#1a1a1a',
       }}
     >
-      {/* Header with back button */}
-      <div className="p-4 border-b border-gray-700 bg-gray-900">
-        <div className="flex items-center justify-between">
-          <button
-            onClick={handleBackToHome}
-            className="flex items-center space-x-2 text-yellow-400 hover:text-yellow-300 transition-colors"
-          >
-            <ArrowLeft size={20} />
-            <span className="font-medium">Back to Home</span>
-          </button>
-          
-          <h1 className="text-lg font-semibold text-white">
-            Knowledge Graph Analysis
-          </h1>
-          
-          <div className="w-24"></div> {/* Spacer for centering */}
-        </div>
-      </div>
+      {/* Floating Back Button */}
+      <button
+        onClick={handleBackToHome}
+        className="fixed top-4 left-4 z-50 flex items-center space-x-2 px-3 py-2 bg-gray-900/90 backdrop-blur-sm border border-gray-700 rounded-lg text-yellow-400 hover:text-yellow-300 hover:bg-gray-800/90 transition-all duration-200 shadow-lg"
+      >
+        <ArrowLeft size={18} />
+        <span className="font-medium text-sm">Back to Home</span>
+      </button>
 
-      <div className="flex h-[calc(100vh-73px)]">
-        {/* Main Graph Canvas */}
-        <div className="flex-1">
-          <KnowledgeGraph 
-            data={currentGraphData} 
-            onNodeSelect={handleNodeSelect}
-            onNodeExplain={handleNodeExplain}
-          />
+      <div className="flex h-screen">
+        {/* Main Graph Canvas with Timeline */}
+        <div className="flex-1 flex flex-col main-container">
+          <div className="flex-1">
+            <KnowledgeGraph 
+              data={currentGraphData} 
+              onNodeSelect={handleNodeSelect}
+              onNodeExplain={handleNodeExplain}
+            />
+          </div>
+          
+          {/* Timeline Resize Handle */}
+          {!isTimelineCollapsed && (
+            <div
+              className="h-1 bg-gray-700 hover:bg-yellow-500 cursor-row-resize transition-colors timeline-container"
+              onMouseDown={handleTimelineMouseDown}
+            />
+          )}
+          
+          {/* Timeline at bottom */}
+          <div 
+            className="flex-shrink-0 border-t border-gray-700"
+            style={{ height: isTimelineCollapsed ? 40 : timelineHeight }}
+          >
+            <TimelineView 
+              isCollapsed={isTimelineCollapsed}
+              onToggleCollapse={toggleTimelineCollapse}
+            />
+          </div>
         </div>
 
         {/* Resize Handle */}
